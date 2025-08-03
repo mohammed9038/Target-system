@@ -1,0 +1,16 @@
+[2025-08-03 18:33:32] local.ERROR: Command "session:flush" is not defined.
+
+Did you mean one of these?
+    queue:flush
+    session:table {"exception":"[object] (Symfony\\Component\\Console\\Exception\\CommandNotFoundException(code: 0): Command \"session:flush\" is not defined.
+
+Did you mean one of these?
+    queue:flush
+    session:table at C:\\Target\\vendor\\symfony\\console\\Application.php:725)
+[stacktrace]
+#0 C:\\Target\\vendor\\symfony\\console\\Application.php(283): Symfony\\Component\\Console\\Application->find('session:flush')
+#1 C:\\Target\\vendor\\symfony\\console\\Application.php(192): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#2 C:\\Target\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Console\\Kernel.php(197): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#3 C:\\Target\\artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#4 {main}
+"} 

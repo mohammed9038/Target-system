@@ -223,6 +223,20 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = true;
         });
     }
+
+    // Refresh CSRF token if page was loaded after logout
+    if (window.performance && window.performance.navigation.type === 1) {
+        // Page was refreshed - fetch fresh CSRF token
+        fetch('/debug-csrf')
+            .then(response => response.json())
+            .then(data => {
+                const csrfInput = form.querySelector('input[name="_token"]');
+                if (csrfInput && data.csrf_token) {
+                    csrfInput.value = data.csrf_token;
+                }
+            })
+            .catch(error => console.log('CSRF refresh failed:', error));
+    }
 });
 </script>
 @endsection 

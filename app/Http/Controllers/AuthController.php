@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -14,7 +15,13 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
         
-        return view('auth.login');
+        // Ensure fresh session and CSRF token
+        session()->regenerateToken();
+        
+        return response()->view('auth.login')
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function login(Request $request)
@@ -37,21 +44,30 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            \Log::info('Logout attempt', [
+            Log::info('Logout attempt', [
                 'user' => Auth::user() ? Auth::user()->username : 'None',
                 'session_id' => $request->session()->getId(),
-                'csrf_token' => $request->session()->token(),
             ]);
             
+            // Clear authentication
             Auth::logout();
+            
+            // Invalidate the session
             $request->session()->invalidate();
+            
+            // Regenerate CSRF token
             $request->session()->regenerateToken();
             
-            \Log::info('Logout successful');
+            // Force session save
+            $request->session()->save();
+            
+            Log::info('Logout successful');
+            
+            // Redirect to login with fresh session
             return redirect()->route('login')->with('status', 'Successfully logged out');
             
         } catch (\Exception $e) {
-            \Log::error('Logout error: ' . $e->getMessage());
+            Log::error('Logout error: ' . $e->getMessage());
             return redirect()->route('login')->with('error', 'Logout failed');
         }
     }
