@@ -7,6 +7,29 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * App\Models\User
+ * 
+ * @property int $id
+ * @property string $username
+ * @property string $password
+ * @property string $role
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Region[] $regions
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Channel[] $channels
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\UserClassification[] $classifications
+ * @property-read array $classification_list
+ * @method bool isAdmin()
+ * @method bool isManager()
+ * @method array|null scope()
+ * @method array getClassificationListAttribute()
+ * @method array getRegionIds()
+ * @method array getChannelIds()
+ * @method bool hasRegion(int $regionId)
+ * @method bool hasChannel(int $channelId)
+ * @method bool hasClassification(string $classification)
+ */
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
