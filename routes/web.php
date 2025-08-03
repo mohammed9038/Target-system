@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ChannelController;
@@ -17,10 +19,45 @@ use App\Http\Controllers\Api\V1\DependentController as ApiDependentController;
 use App\Http\Controllers\Api\V1\PeriodController as ApiPeriodController;
 
 Route::get('/', function () {
-    if (auth()->check()) {
+    if (Auth::check()) {
         return redirect()->route('dashboard');
     }
     return redirect()->route('login');
+});
+
+// Simple test route without middleware
+Route::get('/test-simple', function () {
+    return response()->json([
+        'status' => 'OK',
+        'message' => 'Simple route working',
+        'timestamp' => now(),
+        'session_id' => session()->getId(),
+        'csrf_token' => csrf_token()
+    ]);
+});
+
+// Test matrix performance route
+Route::get('/test-matrix-performance', function () {
+    $startTime = microtime(true);
+    
+    // Simulate the matrix query with basic stats
+    $stats = [
+        'salesmen_count' => \App\Models\Salesman::count(),
+        'suppliers_count' => \App\Models\Supplier::count(),
+        'targets_count' => \App\Models\SalesTarget::count(),
+        'categories_count' => \App\Models\Category::count(),
+    ];
+    
+    $endTime = microtime(true);
+    $executionTime = round(($endTime - $startTime) * 1000, 2);
+    
+    return response()->json([
+        'status' => 'OK',
+        'message' => 'Matrix performance test',
+        'execution_time_ms' => $executionTime,
+        'stats' => $stats,
+        'timestamp' => now()
+    ]);
 });
 
 // Final comprehensive test route
@@ -118,18 +155,43 @@ Route::middleware(['auth'])->group(function () {
     
     // Regions
     Route::resource('regions', RegionController::class);
+    Route::post('regions/{region}/toggle_status', [RegionController::class, 'toggleStatus'])->name('regions.toggle_status');
+    Route::get('regions-import', [RegionController::class, 'showImportForm'])->name('regions.import.form');
+    Route::post('regions-import', [RegionController::class, 'import'])->name('regions.import');
+    Route::get('regions-export', [RegionController::class, 'export'])->name('regions.export');
+    Route::get('regions-template', [RegionController::class, 'downloadTemplate'])->name('regions.template');
     
     // Channels
     Route::resource('channels', ChannelController::class);
+    Route::post('channels/{channel}/toggle_status', [ChannelController::class, 'toggleStatus'])->name('channels.toggle_status');
+    Route::get('channels-import', [ChannelController::class, 'showImportForm'])->name('channels.import.form');
+    Route::post('channels-import', [ChannelController::class, 'import'])->name('channels.import');
+    Route::get('channels-export', [ChannelController::class, 'export'])->name('channels.export');
+    Route::get('channels-template', [ChannelController::class, 'downloadTemplate'])->name('channels.template');
     
     // Suppliers
     Route::resource('suppliers', SupplierController::class);
+    Route::post('suppliers/{supplier}/toggle_status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle_status');
+    Route::get('suppliers-import', [SupplierController::class, 'showImportForm'])->name('suppliers.import.form');
+    Route::post('suppliers-import', [SupplierController::class, 'import'])->name('suppliers.import');
+    Route::get('suppliers-export', [SupplierController::class, 'export'])->name('suppliers.export');
+    Route::get('suppliers-template', [SupplierController::class, 'downloadTemplate'])->name('suppliers.template');
     
     // Categories
     Route::resource('categories', CategoryController::class);
+    Route::post('categories/{category}/toggle_status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle_status');
+    Route::get('categories-import', [CategoryController::class, 'showImportForm'])->name('categories.import.form');
+    Route::post('categories-import', [CategoryController::class, 'import'])->name('categories.import');
+    Route::get('categories-export', [CategoryController::class, 'export'])->name('categories.export');
+    Route::get('categories-template', [CategoryController::class, 'downloadTemplate'])->name('categories.template');
     
     // Salesmen
     Route::resource('salesmen', SalesmanController::class);
+    Route::post('salesmen/{salesman}/toggle_status', [SalesmanController::class, 'toggleStatus'])->name('salesmen.toggle_status');
+    Route::get('salesmen-import', [SalesmanController::class, 'showImportForm'])->name('salesmen.import.form');
+    Route::post('salesmen-import', [SalesmanController::class, 'import'])->name('salesmen.import');
+    Route::get('salesmen-export', [SalesmanController::class, 'export'])->name('salesmen.export');
+    Route::get('salesmen-template', [SalesmanController::class, 'downloadTemplate'])->name('salesmen.template');
     
     // Periods
     Route::resource('periods', PeriodController::class);
@@ -204,7 +266,7 @@ Route::middleware(['auth'])->group(function () {
     
     // Original debug route
     Route::get('/debug-matrix-old', function() {
-        $user = auth()->user();
+        $user = Auth::user();
         $data = [];
         
         // Base query for salesmen-supplier combinations
@@ -335,4 +397,8 @@ Route::middleware(['auth'])->group(function () {
         
         return response()->json($data, 200, [], JSON_PRETTY_PRINT);
     });
-});Route::get('/api/test', function() { return response()->json(['status' => 'working', 'time' => now()]); });
+});
+
+Route::get('/api/test', function() { 
+    return response()->json(['status' => 'working', 'time' => now()]); 
+});

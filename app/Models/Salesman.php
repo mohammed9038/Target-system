@@ -15,6 +15,7 @@ class Salesman extends Model
         'name',
         'region_id',
         'channel_id',
+        'is_active',
     ];
 
     protected static function boot()

@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\RegionController;
 use App\Http\Controllers\Api\V1\ChannelController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Api\V1\PeriodController;
 use App\Http\Controllers\Api\V1\TargetController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\DependentController;
+use App\Http\Controllers\API\MasterDataController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,8 +43,8 @@ Route::prefix('v1')->group(function () {
     // Test endpoint
     Route::get('/test-auth', function() {
         return response()->json([
-            'authenticated' => auth()->check(),
-            'user' => auth()->user() ? auth()->user()->username : null,
+            'authenticated' => Auth::check(),
+            'user' => Auth::user() ? Auth::user()->username : null,
             'guard' => config('auth.defaults.guard')
         ]);
     });
@@ -56,8 +58,8 @@ Route::prefix('v1')->group(function () {
             
             return response()->json([
                 'status' => 'success',
-                'auth_check' => auth()->check(),
-                'user' => auth()->user() ? auth()->user()->username : null,
+                'auth_check' => Auth::check(),
+                'user' => Auth::user() ? Auth::user()->username : null,
                 'counts' => [
                     'users' => $userCount,
                     'salesmen' => $salesmenCount,
@@ -77,11 +79,11 @@ Route::prefix('v1')->group(function () {
         
         // Master Data CRUD (Admin only)
         Route::middleware('admin')->group(function () {
-            Route::apiResource('regions', RegionController::class);
-            Route::apiResource('channels', ChannelController::class);
-            Route::apiResource('suppliers', SupplierController::class);
-            Route::apiResource('categories', CategoryController::class);
-            Route::apiResource('salesmen', SalesmanController::class);
+            Route::apiResource('regions', RegionController::class)->names('api.regions');
+            Route::apiResource('channels', ChannelController::class)->names('api.channels');
+            Route::apiResource('suppliers', SupplierController::class)->names('api.suppliers');
+            Route::apiResource('categories', CategoryController::class)->names('api.categories');
+            Route::apiResource('salesmen', SalesmanController::class)->names('api.salesmen');
             
             // Periods management (Admin only)
             Route::get('/periods', [PeriodController::class, 'index']);
@@ -99,6 +101,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/deps/salesmen', [DependentController::class, 'salesmen']);
         Route::get('/deps/suppliers', [DependentController::class, 'suppliers']);
         Route::get('/deps/categories', [DependentController::class, 'categories']);
+        
+        // Filtered dependencies for cascading dropdowns
+        Route::get('/deps/filtered/suppliers', [DependentController::class, 'filteredSuppliers']);
+        Route::get('/deps/filtered/categories', [DependentController::class, 'filteredCategories']);
+        Route::get('/deps/filtered/salesmen', [DependentController::class, 'filteredSalesmen']);
 
 
         // Export/Import routes (separate from targets resource)
@@ -110,10 +117,57 @@ Route::prefix('v1')->group(function () {
         Route::post('/targets/bulk', [TargetController::class, 'bulkUpsert']);
         Route::post('/targets/upload', [TargetController::class, 'upload']);
         Route::post('/targets/bulk-save', [TargetController::class, 'bulkSave']);
-        Route::apiResource('targets', TargetController::class);
+        Route::apiResource('targets', TargetController::class)->names('api.targets');
 
         // Reports (Admin and Manager with scope)
         Route::get('/reports/summary', [ReportController::class, 'summary']);
         Route::get('/reports/export.xlsx', [ReportController::class, 'export']);
+    });
+    
+    // Master Data Import/Export routes (rate limited)
+    Route::middleware(['throttle:20,1'])->prefix('master-data')->group(function () {
+        // Salesmen routes
+        Route::get('/salesmen', [MasterDataController::class, 'getSalesmen']);
+        Route::get('/salesmen/export', [MasterDataController::class, 'exportSalesmen']);
+        Route::post('/salesmen/import', [MasterDataController::class, 'importSalesmen']);
+        Route::get('/salesmen/template', [MasterDataController::class, 'getSalesmenTemplate']);
+        
+        // Suppliers routes  
+        Route::get('/suppliers', [MasterDataController::class, 'getSuppliers']);
+        Route::get('/suppliers/export', [MasterDataController::class, 'exportSuppliers']);
+        Route::post('/suppliers/import', [MasterDataController::class, 'importSuppliers']);
+        Route::get('/suppliers/template', [MasterDataController::class, 'getSuppliersTemplate']);
+        
+        // Other master data routes
+        Route::get('/regions', [MasterDataController::class, 'getRegions']);
+        Route::get('/channels', [MasterDataController::class, 'getChannels']);
+        Route::get('/categories', [MasterDataController::class, 'getCategories']);
+    });
+    
+    // System info endpoint (for statistics)
+    Route::get('/system/info', function() {
+        try {
+            $salesmenCount = App\Models\Salesman::count();
+            $suppliersCount = App\Models\Supplier::count();
+            $categoriesCount = App\Models\Category::count();
+            $regionsCount = App\Models\Region::count();
+            $channelsCount = App\Models\Channel::count();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'salesmen_count' => $salesmenCount,
+                    'suppliers_count' => $suppliersCount,
+                    'categories_count' => $categoriesCount,
+                    'regions_count' => $regionsCount,
+                    'channels_count' => $channelsCount
+                ]
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get system information'
+            ], 500);
+        }
     });
 }); 

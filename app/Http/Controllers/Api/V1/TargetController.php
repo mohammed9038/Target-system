@@ -7,6 +7,9 @@ use App\Models\SalesTarget;
 use App\Models\ActiveMonthYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class TargetController extends Controller
 {
@@ -409,6 +412,26 @@ class TargetController extends Controller
 
         $user = Auth::user();
         
+        // Create cache key based on request parameters and user
+        $cacheKey = 'matrix_' . md5(serialize([
+            'user_id' => $user->id,
+            'year' => $request->year,
+            'month' => $request->month,
+            'region_id' => $request->region_id,
+            'channel_id' => $request->channel_id,
+            'supplier_id' => $request->supplier_id,
+            'category_id' => $request->category_id,
+            'salesman_id' => $request->salesman_id,
+            'classification' => $request->classification,
+        ]));
+        
+        // Try to get cached response (cache for 5 minutes)
+        $cachedResponse = Cache::get($cacheKey);
+        if ($cachedResponse) {
+            $cachedResponse['meta']['from_cache'] = true;
+            return response()->json($cachedResponse);
+        }
+        
         // Check period status first
         $period = ActiveMonthYear::where('year', $request->year)
                                 ->where('month', $request->month)
@@ -427,18 +450,29 @@ class TargetController extends Controller
                     empty($userScope['channel_ids']) && 
                     empty($userScope['classifications'])
                 )) {
-                    return response()->json([
+                    $emptyResponse = [
                         'data' => [
                             'salesmen' => [],
                             'suppliers' => [],
                             'targets' => [],
                             'is_period_open' => $isPeriodOpen
+                        ],
+                        'meta' => [
+                            'execution_time_ms' => 0,
+                            'salesmen_count' => 0,
+                            'suppliers_count' => 0,
+                            'targets_count' => 0,
+                            'from_cache' => false
                         ]
-                    ]);
+                    ];
+                    
+                    // Cache empty response for 1 minute
+                    Cache::put($cacheKey, $emptyResponse, 60);
+                    return response()->json($emptyResponse);
                 }
             } catch (\Exception $e) {
                 // Log the error for debugging
-                \Log::error('Error getting user scope for user ' . $user->id . ': ' . $e->getMessage());
+                Log::error('Error getting user scope for user ' . $user->id . ': ' . $e->getMessage());
                 
                 // Return error response with details
                 return response()->json([
@@ -447,54 +481,62 @@ class TargetController extends Controller
             }
         }
 
-        // 1. Get Salesmen with all filters applied
-        $salesmenQuery = \App\Models\Salesman::with(['region', 'channel', 'classifications']);
-
+        // Start measuring performance
+        $startTime = microtime(true);
+        
+        // **OPTIMIZED QUERY 1: Get Salesmen with single optimized query**
+        $salesmenQuery = DB::table('salesmen')
+            ->select([
+                'salesmen.id as salesman_id',
+                'salesmen.salesman_code',
+                'salesmen.name as salesman_name',
+                'salesmen.region_id',
+                'salesmen.channel_id',
+                'regions.name as region_name',
+                'channels.name as channel_name'
+            ])
+            ->leftJoin('regions', 'salesmen.region_id', '=', 'regions.id')
+            ->leftJoin('channels', 'salesmen.channel_id', '=', 'channels.id')
+            ->where('salesmen.is_active', true)
+            ->where('regions.is_active', true)
+            ->where('channels.is_active', true);
+        
+        // Apply filters
         if ($request->filled('region_id')) {
-            $salesmenQuery->where('region_id', $request->region_id);
+            $salesmenQuery->where('salesmen.region_id', $request->region_id);
         }
         if ($request->filled('channel_id')) {
-            $salesmenQuery->where('channel_id', $request->channel_id);
+            $salesmenQuery->where('salesmen.channel_id', $request->channel_id);
         }
         if ($request->filled('salesman_id')) {
-            $salesmenQuery->where('id', $request->salesman_id);
-        }
-        if ($request->filled('classification')) {
-            $salesmenQuery->whereHas('classifications', function($q) use ($request) {
-                $q->where('classification', $request->classification);
-            });
+            $salesmenQuery->where('salesmen.id', $request->salesman_id);
         }
 
         // Apply user scope filters for non-admin users
         if ($userScope) {
             // Filter by user's assigned regions
             if (!empty($userScope['region_ids'])) {
-                $salesmenQuery->whereIn('region_id', $userScope['region_ids']);
+                $salesmenQuery->whereIn('salesmen.region_id', $userScope['region_ids']);
             }
             
             // Filter by user's assigned channels
             if (!empty($userScope['channel_ids'])) {
-                $salesmenQuery->whereIn('channel_id', $userScope['channel_ids']);
-            }
-            
-            // Filter by user's assigned classifications
-            if (!empty($userScope['classifications'])) {
-                $salesmenQuery->whereHas('classifications', function($q) use ($userScope) {
-                    $q->whereIn('classification', $userScope['classifications']);
-                });
+                $salesmenQuery->whereIn('salesmen.channel_id', $userScope['channel_ids']);
             }
         }
 
-        // 2. Get Suppliers and Categories with filters
-        $suppliersQuery = \DB::table('suppliers')
-            ->join('categories', 'suppliers.id', '=', 'categories.supplier_id')
-            ->select(
+        // **OPTIMIZED QUERY 2: Get Suppliers and Categories with single optimized query**
+        $suppliersQuery = DB::table('suppliers')
+            ->select([
                 'suppliers.id as supplier_id',
                 'suppliers.name as supplier_name',
                 'suppliers.classification as supplier_classification',
                 'categories.id as category_id',
                 'categories.name as category_name'
-            );
+            ])
+            ->join('categories', 'suppliers.id', '=', 'categories.supplier_id')
+            ->where('suppliers.is_active', true)
+            ->where('categories.is_active', true);
 
         if ($request->filled('supplier_id')) {
             $suppliersQuery->where('suppliers.id', $request->supplier_id);
@@ -502,20 +544,21 @@ class TargetController extends Controller
         if ($request->filled('category_id')) {
             $suppliersQuery->where('categories.id', $request->category_id);
         }
-         if ($request->filled('classification')) {
+        if ($request->filled('classification')) {
             $suppliersQuery->where('suppliers.classification', $request->classification);
         }
 
         // Apply user scope filters to suppliers for non-admin users
-        if ($userScope) {
-            // Filter by user's assigned classifications
-            if (!empty($userScope['classifications'])) {
-                $suppliersQuery->whereIn('suppliers.classification', $userScope['classifications']);
-            }
+        if ($userScope && !empty($userScope['classifications'])) {
+            $suppliersQuery->whereIn('suppliers.classification', $userScope['classifications']);
         }
 
-        // 3. Get existing targets for the given filters
-        $targetsQuery = SalesTarget::where('year', $request->year)->where('month', $request->month);
+        // **OPTIMIZED QUERY 3: Get existing targets with single optimized query**
+        $targetsQuery = DB::table('sales_targets')
+            ->select(['salesman_id', 'supplier_id', 'category_id', 'target_amount'])
+            ->where('year', $request->year)
+            ->where('month', $request->month);
+            
         if ($request->filled('salesman_id')) {
             $targetsQuery->where('salesman_id', $request->salesman_id);
         }
@@ -526,52 +569,95 @@ class TargetController extends Controller
             $targetsQuery->where('category_id', $request->category_id);
         }
 
-        // Apply user scope filters to targets for non-admin users
-        if ($userScope) {
-            // Filter targets by user's assigned salesmen (regions/channels/classifications)
-            $targetsQuery->whereHas('salesman', function($q) use ($userScope) {
-                if (!empty($userScope['region_ids'])) {
-                    $q->whereIn('region_id', $userScope['region_ids']);
-                }
-                if (!empty($userScope['channel_ids'])) {
-                    $q->whereIn('channel_id', $userScope['channel_ids']);
-                }
-                if (!empty($userScope['classifications'])) {
-                    $q->whereHas('classifications', function($subQ) use ($userScope) {
-                        $subQ->whereIn('classification', $userScope['classifications']);
-                    });
-                }
-            });
+        // Execute all queries efficiently
+        $salesmen = $salesmenQuery->orderBy('salesmen.name')->get();
+        $suppliers = $suppliersQuery->orderBy('suppliers.name')->orderBy('categories.name')->get();
+        $targets = $targetsQuery->get();
+        
+        // **OPTIMIZED QUERY 4: Get classifications for salesmen in batch**
+        $salesmenIds = $salesmen->pluck('salesman_id')->toArray();
+        $classifications = [];
+        if (!empty($salesmenIds)) {
+            $classificationData = DB::table('salesman_classifications')
+                ->select(['salesman_id', 'classification'])
+                ->whereIn('salesman_id', $salesmenIds)
+                ->get()
+                ->groupBy('salesman_id');
+            
+            foreach ($classificationData as $salesmanId => $classRows) {
+                $classifications[$salesmanId] = $classRows->pluck('classification')->toArray();
+            }
+        }
 
-            // Filter targets by user's assigned supplier classifications
-            if (!empty($userScope['classifications'])) {
-                $targetsQuery->whereHas('supplier', function($q) use ($userScope) {
-                    $q->whereIn('classification', $userScope['classifications']);
+        // Apply classification filters if needed
+        if ($request->filled('classification') || ($userScope && !empty($userScope['classifications']))) {
+            $allowedClassifications = [];
+            
+            if ($request->filled('classification')) {
+                $allowedClassifications[] = $request->classification;
+            }
+            
+            if ($userScope && !empty($userScope['classifications'])) {
+                $allowedClassifications = array_merge($allowedClassifications, $userScope['classifications']);
+            }
+            
+            if (!empty($allowedClassifications)) {
+                $salesmen = $salesmen->filter(function($salesman) use ($classifications, $allowedClassifications) {
+                    $salesmanClassifications = $classifications[$salesman->salesman_id] ?? [];
+                    return !empty(array_intersect($salesmanClassifications, $allowedClassifications));
                 });
             }
         }
 
-        $salesmen = $salesmenQuery->get();
+        // Apply user scope filters to targets for non-admin users
+        if ($userScope) {
+            $allowedSalesmenIds = $salesmen->pluck('salesman_id')->toArray();
+            $allowedSupplierIds = $suppliers->where(function($supplier) use ($userScope) {
+                return empty($userScope['classifications']) || 
+                       in_array($supplier->supplier_classification, $userScope['classifications']);
+            })->pluck('supplier_id')->toArray();
+            
+            $targets = $targets->filter(function($target) use ($allowedSalesmenIds, $allowedSupplierIds) {
+                return in_array($target->salesman_id, $allowedSalesmenIds) && 
+                       in_array($target->supplier_id, $allowedSupplierIds);
+            });
+        }
 
-        return response()->json([
+        // Transform salesmen data
+        $salesmenData = $salesmen->map(function($s) use ($classifications) {
+            return [
+                'salesman_id' => $s->salesman_id,
+                'salesman_code' => $s->salesman_code,
+                'salesman_name' => $s->salesman_name,
+                'salesman_classifications' => $classifications[$s->salesman_id] ?? [],
+                'region_name' => $s->region_name ?: 'N/A',
+                'channel_name' => $s->channel_name ?: 'N/A'
+            ];
+        })->values();
+
+        $endTime = microtime(true);
+        $executionTime = round(($endTime - $startTime) * 1000, 2); // Convert to milliseconds
+
+        $response = [
             'data' => [
-                'salesmen' => $salesmen->map(function($s){
-                    $classifications = $s->classifications ? $s->classifications->pluck('classification')->toArray() : [];
-                    
-                    return [
-                        'salesman_id' => $s->id,
-                        'salesman_code' => $s->salesman_code,
-                        'salesman_name' => $s->name,
-                        'salesman_classifications' => $classifications,
-                        'region_name' => $s->region ? $s->region->name : 'N/A',
-                        'channel_name' => $s->channel ? $s->channel->name : 'N/A'
-                    ];
-                }),
-                'suppliers' => $suppliersQuery->get(),
-                'targets' => $targetsQuery->get(['salesman_id', 'supplier_id', 'category_id', 'target_amount']),
+                'salesmen' => $salesmenData,
+                'suppliers' => $suppliers->values(),
+                'targets' => $targets->values(),
                 'is_period_open' => $isPeriodOpen
+            ],
+            'meta' => [
+                'execution_time_ms' => $executionTime,
+                'salesmen_count' => $salesmenData->count(),
+                'suppliers_count' => $suppliers->count(),
+                'targets_count' => $targets->count(),
+                'from_cache' => false
             ]
-        ]);
+        ];
+        
+        // Cache the response for 5 minutes (300 seconds)
+        Cache::put($cacheKey, $response, 300);
+        
+        return response()->json($response);
     }
 
     public function bulkSave(Request $request)
@@ -805,7 +891,7 @@ class TargetController extends Controller
 
     public function upload(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         // Get user scope for permission checks
         $userScope = null;
@@ -1166,7 +1252,7 @@ class TargetController extends Controller
 
     public function downloadTemplate(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         // Get user scope for filtering template data
         $userScope = null;

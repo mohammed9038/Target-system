@@ -18,6 +18,9 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        \App\Events\TargetUpdated::class => [
+            \App\Listeners\ClearTargetCache::class,
+        ],
     ];
 
     /**

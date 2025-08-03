@@ -7,6 +7,7 @@ use App\Models\Region;
 use App\Models\Channel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -127,7 +128,7 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         // Prevent deleting the current user
-        if ($user->id === auth()->id()) {
+        if ($user->id === Auth::id()) {
             return redirect()->route('users.index')->with('error', 'You cannot delete your own account.');
         }
 

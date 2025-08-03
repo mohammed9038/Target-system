@@ -49,6 +49,16 @@
                             @enderror
                         </div>
 
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1" 
+                                       {{ old('is_active', $supplier->is_active) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="is_active">
+                                    {{ __('Active') }}
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> {{ __('Update Supplier') }}

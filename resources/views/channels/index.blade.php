@@ -9,6 +9,17 @@
         <p class="text-muted mb-0">{{ __('Manage sales channels') }}</p>
     </div>
     <div class="d-flex gap-2" style="margin-top: 0.5rem;">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportChannels()">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>{{ __('Export') }}
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="showUploadModal()">
+                <i class="bi bi-upload me-1"></i>{{ __('Import') }}
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadTemplate()">
+                <i class="bi bi-download me-1"></i>{{ __('Template') }}
+            </button>
+        </div>
         <a href="{{ route('channels.create') }}" class="btn btn-primary">
             <i class="bi bi-plus-circle me-2"></i>{{ __('Add Channel') }}
         </a>
@@ -51,10 +62,25 @@
                 </small>
             </div>
             <div class="input-group" style="width: 250px;">
-                <span class="input-group-text bg-light border-end-0">
-                    <i class="bi bi-search text-muted"></i>
-                </span>
-                <input type="text" class="form-control border-start-0" id="searchInput" placeholder="{{ __('Search channels...') }}">
+                <form method="GET" action="{{ route('channels.index') }}" class="d-flex gap-2">
+                    <div class="input-group" style="width: 250px;">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0" 
+                               placeholder="{{ __('Search channels...') }}" value="{{ request('search') }}">
+                        <input type="hidden" name="sort" value="{{ request('sort') }}">
+                        <input type="hidden" name="direction" value="{{ request('direction') }}">
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    @if(request('search'))
+                        <a href="{{ route('channels.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i>
+                        </a>
+                    @endif
+                </form>
             </div>
         </div>
     </div>
@@ -65,17 +91,38 @@
                     <tr>
                         <th class="border-0 px-4">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-hash me-2 text-muted"></i>{{ __('Channel Code') }}
+                                <i class="bi bi-hash me-2 text-muted"></i>
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'id', 'direction' => request('sort') === 'id' && request('direction') === 'asc' ? 'desc' : 'asc']) }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ __('Channel Code') }}
+                                    @if(request('sort') === 'id')
+                                        <i class="bi bi-chevron-{{ request('direction') === 'asc' ? 'up' : 'down' }} ms-1"></i>
+                                    @endif
+                                </a>
                             </div>
                         </th>
                         <th class="border-0">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-diagram-3 me-2 text-muted"></i>{{ __('Name') }}
+                                <i class="bi bi-diagram-3 me-2 text-muted"></i>
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'name', 'direction' => request('sort') === 'name' && request('direction') === 'asc' ? 'desc' : 'asc']) }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ __('Name') }}
+                                    @if(request('sort') === 'name' || !request('sort'))
+                                        <i class="bi bi-chevron-{{ (request('direction') === 'asc' || !request('direction')) ? 'up' : 'down' }} ms-1"></i>
+                                    @endif
+                                </a>
                             </div>
                         </th>
                         <th class="border-0">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-activity me-2 text-muted"></i>{{ __('Status') }}
+                                <i class="bi bi-activity me-2 text-muted"></i>
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'is_active', 'direction' => request('sort') === 'is_active' && request('direction') === 'asc' ? 'desc' : 'asc']) }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ __('Status') }}
+                                    @if(request('sort') === 'is_active')
+                                        <i class="bi bi-chevron-{{ request('direction') === 'asc' ? 'up' : 'down' }} ms-1"></i>
+                                    @endif
+                                </a>
                             </div>
                         </th>
                         <th class="border-0 text-center" style="width: 120px;">
@@ -117,6 +164,15 @@
                                        data-bs-toggle="tooltip">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    <form action="{{ route('channels.toggle_status', $channel) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" 
+                                                class="btn btn-sm {{ $channel->is_active ? 'btn-outline-warning' : 'btn-outline-success' }}" 
+                                                title="{{ $channel->is_active ? __('Deactivate') : __('Activate') }}"
+                                                data-bs-toggle="tooltip">
+                                            <i class="bi {{ $channel->is_active ? 'bi-pause-circle' : 'bi-play-circle' }}"></i>
+                                        </button>
+                                    </form>
                                     <form action="{{ route('channels.destroy', $channel) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -172,6 +228,115 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
+
+// Import/Export functions
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            <div>${message}</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const content = document.querySelector('.container-fluid');
+    content.insertBefore(alertDiv, content.firstChild);
+    
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function exportChannels() {
+    const url = new URL('{{ route("channels.export") }}', window.location.origin);
+    const params = new URLSearchParams();
+    params.append('format', 'xlsx');
+    url.search = params.toString();
+    window.location.href = url.toString();
+}
+
+function showUploadModal() {
+    new bootstrap.Modal(document.getElementById('uploadModal')).show();
+}
+
+function downloadTemplate() {
+    window.location.href = '{{ route("channels.template") }}';
+}
+
+async function uploadChannels() {
+    const fileInput = document.getElementById('upload_file');
+    const updateExisting = document.getElementById('update_existing').checked;
+    
+    if (!fileInput.files.length) {
+        showAlert("Please select a file to upload.", "warning");
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('update_existing', updateExisting ? '1' : '0');
+    formData.append('_token', '{{ csrf_token() }}');
+    
+    try {
+        const response = await fetch('{{ route("channels.import") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (response.ok) {
+            showAlert("Import completed successfully!", "success");
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showAlert("Import failed. Please check your file format.", "danger");
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        showAlert("An error occurred during import.", "danger");
+    }
+}
 </script>
+
+<!-- Import Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ __('Import Channels') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="upload_file" class="form-label">{{ __('Select Excel File') }}</label>
+                        <input type="file" class="form-control" id="upload_file" name="file" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">{{ __('Supported formats: Excel (.xlsx, .xls) and CSV (.csv)') }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="update_existing" name="update_existing" value="1">
+                            <label class="form-check-label" for="update_existing">
+                                {{ __('Update existing records') }}
+                            </label>
+                            <div class="form-text">{{ __('If checked, existing channels will be updated. Otherwise, duplicates will be skipped.') }}</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="uploadChannels()">{{ __('Import') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endpush
 @endsection 

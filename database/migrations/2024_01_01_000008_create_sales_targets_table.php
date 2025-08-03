@@ -22,7 +22,7 @@ return new class extends Migration
             $table->timestamps();
             
             // Unique constraint as per PRD
-            $table->unique(['year', 'month', 'salesman_id', 'supplier_id', 'category_id'], 'sales_targets_unique');
+            $table->unique(['year', 'month', 'salesman_id', 'supplier_id', 'category_id'], 'st_unique_idx');
         });
     }
 

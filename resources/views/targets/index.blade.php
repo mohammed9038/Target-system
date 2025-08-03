@@ -126,7 +126,7 @@
         <!-- Matrix Container -->
         <div id="matrix-container" style="display: none;">
             <div class="table-responsive">
-                <table class="table table-hover table-sm mb-0" id="target-matrix" style="font-size: 0.85rem;">
+                <table class="table table-hover table-sm mb-0" id="target-matrix" style="font-size: 0.90rem;">
                     <thead class="table-dark">
                         <tr>
                             <th class="py-2 px-3 small">
@@ -153,6 +153,16 @@
                         </tr>
                     </thead>
                     <tbody></tbody>
+                    <tfoot class="table-light border-top">
+                        <tr class="fw-bold">
+                            <td colspan="6" class="py-3 px-4 text-end">
+                                <i class="bi bi-calculator me-2 text-primary"></i>{{ __('Total Target Amount:') }}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <span id="matrix-total" class="fw-bold text-success fs-6">$0.00</span>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
@@ -281,8 +291,105 @@
             // Auto-set user's classification filter based on their permissions
             await setUserClassificationFilter(regions.data, channels.data, suppliers.data);
             
+            // Set up cascading filter event listeners
+            setupCascadingFilters();
+            
         } catch (error) {
             showAlert("Failed to load filter data.", "error");
+        }
+    }
+
+    /**
+     * Set up cascading filter event listeners
+     */
+    function setupCascadingFilters() {
+        // Classification change affects suppliers and salesmen
+        document.getElementById('filter_classification').addEventListener('change', function() {
+            updateSuppliersFilter();
+            updateSalesmenFilter();
+        });
+
+        // Supplier change affects categories
+        document.getElementById('filter_supplier').addEventListener('change', function() {
+            updateCategoriesFilter();
+        });
+
+        // Region change affects salesmen
+        document.getElementById('filter_region').addEventListener('change', function() {
+            updateSalesmenFilter();
+        });
+
+        // Channel change affects salesmen
+        document.getElementById('filter_channel').addEventListener('change', function() {
+            updateSalesmenFilter();
+        });
+    }
+
+    /**
+     * Update suppliers dropdown based on classification filter
+     */
+    async function updateSuppliersFilter() {
+        try {
+            const classification = document.getElementById('filter_classification').value;
+            const url = `/api/v1/deps/filtered/suppliers${classification ? `?classification=${classification}` : ''}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            populateSelect("filter_supplier", data.data, "id", "name");
+            
+            // Reset dependent filters
+            updateCategoriesFilter();
+        } catch (error) {
+            console.error('Failed to update suppliers filter:', error);
+        }
+    }
+
+    /**
+     * Update categories dropdown based on supplier and classification filters
+     */
+    async function updateCategoriesFilter() {
+        try {
+            const classification = document.getElementById('filter_classification').value;
+            const supplierId = document.getElementById('filter_supplier').value;
+            
+            const params = new URLSearchParams();
+            if (classification) params.append('classification', classification);
+            if (supplierId) params.append('supplier_id', supplierId);
+            
+            const url = `/api/v1/deps/filtered/categories${params.toString() ? `?${params.toString()}` : ''}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            populateSelect("filter_category", data.data, "id", "name");
+        } catch (error) {
+            console.error('Failed to update categories filter:', error);
+        }
+    }
+
+    /**
+     * Update salesmen dropdown based on region, channel, and classification filters
+     */
+    async function updateSalesmenFilter() {
+        try {
+            const classification = document.getElementById('filter_classification').value;
+            const regionId = document.getElementById('filter_region').value;
+            const channelId = document.getElementById('filter_channel').value;
+            
+            const params = new URLSearchParams();
+            if (classification) params.append('classification', classification);
+            if (regionId) params.append('region_id', regionId);
+            if (channelId) params.append('channel_id', channelId);
+            
+            const url = `/api/v1/deps/filtered/salesmen${params.toString() ? `?${params.toString()}` : ''}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            populateSelect("filter_salesman", data.data, "id", "name");
+        } catch (error) {
+            console.error('Failed to update salesmen filter:', error);
         }
     }
 
@@ -458,12 +565,12 @@
                                 </div>
                             </td>
                             <td class="py-3 px-4 border-0">
-                                <span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1">
+                                <span class="text-dark fw-medium">
                                     <i class="bi bi-geo-alt me-1"></i>${s.region_name || 'N/A'}
                                 </span>
                             </td>
                             <td class="py-3 px-4 border-0">
-                                <span class="badge bg-warning bg-opacity-10 text-warning px-2 py-1">
+                                <span class="text-dark fw-medium">
                                     <i class="bi bi-diagram-3 me-1"></i>${s.channel_name || 'N/A'}
                                 </span>
                             </td>
@@ -471,7 +578,7 @@
                                 <span class="text-dark fw-medium">${sup.supplier_name}</span>
                             </td>
                             <td class="py-3 px-4 border-0">
-                                <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">
+                                <span class="text-dark fw-medium">
                                     ${sup.category_name}
                                 </span>
                             </td>
@@ -502,6 +609,30 @@
         document.getElementById("matrix-empty").style.display = "none";
         document.getElementById("matrix-container").style.display = "block";
         isMatrixLoaded = true;
+        
+        // Calculate and display initial total
+        updateMatrixTotal();
+        
+        // Add event listeners to all input fields for real-time total calculation
+        document.querySelectorAll("#target-matrix input[type='number']").forEach(input => {
+            input.addEventListener('input', updateMatrixTotal);
+        });
+    }
+
+    /**
+     * Calculate and update the matrix total
+     */
+    function updateMatrixTotal() {
+        let total = 0;
+        document.querySelectorAll("#target-matrix input[type='number']").forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+        
+        const totalElement = document.getElementById('matrix-total');
+        if (totalElement) {
+            totalElement.textContent = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
     }
 
     function isClassificationCompatible(salesmanClassifications, supplierClass) {
@@ -537,7 +668,7 @@
         saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Saving...`;
 
         try {
-            const response = await fetch(`/api/targets/bulk-save`, {
+            const response = await fetch(`/api/v1/targets/bulk-save`, {
                 method: 'POST',
                 headers: apiOptions.headers,
                 body: JSON.stringify({

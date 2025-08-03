@@ -308,13 +308,7 @@ async function loadFilters() {
         if (regionsResponse.ok) {
             const regions = await regionsResponse.json();
             console.log('🏘️ Regions loaded:', regions);
-            const regionSelect = document.getElementById('regionFilter');
-            regions.data?.forEach(region => {
-                const option = document.createElement('option');
-                option.value = region.id;
-                option.textContent = region.name;
-                regionSelect.appendChild(option);
-            });
+            populateSelect('regionFilter', regions.data, 'id', 'name');
         } else {
             console.error('❌ Regions failed:', regionsResponse.status, await regionsResponse.text());
         }
@@ -327,13 +321,7 @@ async function loadFilters() {
         if (channelsResponse.ok) {
             const channels = await channelsResponse.json();
             console.log('🏢 Channels loaded:', channels);
-            const channelSelect = document.getElementById('channelFilter');
-            channels.data?.forEach(channel => {
-                const option = document.createElement('option');
-                option.value = channel.id;
-                option.textContent = channel.name;
-                channelSelect.appendChild(option);
-            });
+            populateSelect('channelFilter', channels.data, 'id', 'name');
         } else {
             console.error('❌ Channels failed:', channelsResponse.status, await channelsResponse.text());
         }
@@ -346,13 +334,7 @@ async function loadFilters() {
         if (suppliersResponse.ok) {
             const suppliers = await suppliersResponse.json();
             console.log('🏪 Suppliers loaded:', suppliers);
-            const supplierSelect = document.getElementById('supplierFilter');
-            suppliers.data?.forEach(supplier => {
-                const option = document.createElement('option');
-                option.value = supplier.id;
-                option.textContent = supplier.name;
-                supplierSelect.appendChild(option);
-            });
+            populateSelect('supplierFilter', suppliers.data, 'id', 'name');
         } else {
             console.error('❌ Suppliers failed:', suppliersResponse.status, await suppliersResponse.text());
         }
@@ -365,13 +347,7 @@ async function loadFilters() {
         if (categoriesResponse.ok) {
             const categories = await categoriesResponse.json();
             console.log('📦 Categories loaded:', categories);
-            const categorySelect = document.getElementById('categoryFilter');
-            categories.data?.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name;
-                categorySelect.appendChild(option);
-            });
+            populateSelect('categoryFilter', categories.data, 'id', 'name');
         } else {
             console.error('❌ Categories failed:', categoriesResponse.status, await categoriesResponse.text());
         }
@@ -384,18 +360,169 @@ async function loadFilters() {
         if (salesmenResponse.ok) {
             const salesmen = await salesmenResponse.json();
             console.log('👥 Salesmen loaded:', salesmen);
-            const salesmanSelect = document.getElementById('salesmanFilter');
-            salesmen.data?.forEach(salesman => {
-                const option = document.createElement('option');
-                option.value = salesman.id;
-                option.textContent = `${salesman.name} (${salesman.salesman_code})`;
-                salesmanSelect.appendChild(option);
-            });
+            populateSelect('salesmanFilter', salesmen.data, 'id', 'name');
         } else {
             console.error('❌ Salesmen failed:', salesmenResponse.status, await salesmenResponse.text());
         }
+
+        // Set up cascading filters
+        setupCascadingFilters();
+        
     } catch (error) {
         console.error('Error loading filters:', error);
+    }
+}
+
+/**
+ * Helper function to populate select elements
+ */
+function populateSelect(elementId, data, valueField, textField) {
+    const select = document.getElementById(elementId);
+    if (select && data) {
+        const firstOption = select.options[0]; // Preserve the "All" option
+        select.innerHTML = "";
+        if (firstOption) {
+            select.appendChild(firstOption);
+        }
+        data.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item[valueField];
+            option.textContent = item[textField];
+            select.appendChild(option);
+        });
+    }
+}
+
+/**
+ * Set up cascading filter event listeners
+ */
+function setupCascadingFilters() {
+    // Classification change affects suppliers and salesmen
+    const classificationSelect = document.getElementById('classificationFilter');
+    if (classificationSelect) {
+        classificationSelect.addEventListener('change', function() {
+            updateSuppliersFilter();
+            updateSalesmenFilter();
+        });
+    }
+
+    // Supplier change affects categories
+    const supplierSelect = document.getElementById('supplierFilter');
+    if (supplierSelect) {
+        supplierSelect.addEventListener('change', function() {
+            updateCategoriesFilter();
+        });
+    }
+
+    // Region change affects salesmen
+    const regionSelect = document.getElementById('regionFilter');
+    if (regionSelect) {
+        regionSelect.addEventListener('change', function() {
+            updateSalesmenFilter();
+        });
+    }
+
+    // Channel change affects salesmen
+    const channelSelect = document.getElementById('channelFilter');
+    if (channelSelect) {
+        channelSelect.addEventListener('change', function() {
+            updateSalesmenFilter();
+        });
+    }
+}
+
+/**
+ * Update suppliers dropdown based on classification filter
+ */
+async function updateSuppliersFilter() {
+    const fetchOptions = {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+    };
+
+    try {
+        const classification = document.getElementById('classificationFilter').value;
+        const url = `/api/v1/deps/filtered/suppliers${classification ? `?classification=${classification}` : ''}`;
+        
+        const response = await fetch(url, fetchOptions);
+        const data = await response.json();
+        
+        populateSelect('supplierFilter', data.data, 'id', 'name');
+        
+        // Reset dependent filters
+        updateCategoriesFilter();
+    } catch (error) {
+        console.error('Failed to update suppliers filter:', error);
+    }
+}
+
+/**
+ * Update categories dropdown based on supplier and classification filters
+ */
+async function updateCategoriesFilter() {
+    const fetchOptions = {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+    };
+
+    try {
+        const classification = document.getElementById('classificationFilter').value;
+        const supplierId = document.getElementById('supplierFilter').value;
+        
+        const params = new URLSearchParams();
+        if (classification) params.append('classification', classification);
+        if (supplierId) params.append('supplier_id', supplierId);
+        
+        const url = `/api/v1/deps/filtered/categories${params.toString() ? `?${params.toString()}` : ''}`;
+        
+        const response = await fetch(url, fetchOptions);
+        const data = await response.json();
+        
+        populateSelect('categoryFilter', data.data, 'id', 'name');
+    } catch (error) {
+        console.error('Failed to update categories filter:', error);
+    }
+}
+
+/**
+ * Update salesmen dropdown based on region, channel, and classification filters
+ */
+async function updateSalesmenFilter() {
+    const fetchOptions = {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+    };
+
+    try {
+        const classification = document.getElementById('classificationFilter').value;
+        const regionId = document.getElementById('regionFilter').value;
+        const channelId = document.getElementById('channelFilter').value;
+        
+        const params = new URLSearchParams();
+        if (classification) params.append('classification', classification);
+        if (regionId) params.append('region_id', regionId);
+        if (channelId) params.append('channel_id', channelId);
+        
+        const url = `/api/v1/deps/filtered/salesmen${params.toString() ? `?${params.toString()}` : ''}`;
+        
+        const response = await fetch(url, fetchOptions);
+        const data = await response.json();
+        
+        populateSelect('salesmanFilter', data.data, 'id', 'name');
+    } catch (error) {
+        console.error('Failed to update salesmen filter:', error);
     }
 }
 
@@ -611,6 +738,17 @@ async function loadReports() {
                         <tbody>
                             ${tableRows}
                         </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="6" class="text-end border-0">
+                                    <i class="bi bi-calculator me-1 text-muted"></i>{{ __('Total') }}:
+                                </td>
+                                <td class="text-end border-0" id="reportsTotal">
+                                    $0.00
+                                </td>
+                                <td class="border-0"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
                 ${result.data.total ? `
@@ -623,6 +761,9 @@ async function loadReports() {
                 ` : ''}
             `;
         }
+
+        // Calculate and update total
+        updateReportsTotal();
         
     } catch (error) {
         console.error('Error loading reports:', error);
@@ -696,7 +837,33 @@ function clearFilters() {
     document.getElementById('categoryFilter').value = '';
     document.getElementById('salesmanFilter').value = '';
     
-    // Filters cleared
+    // Reload all filters to reset cascading dependencies
+    loadFilters();
+}
+
+// Function to update reports total
+function updateReportsTotal() {
+    const reportsTotal = document.getElementById('reportsTotal');
+    if (!reportsTotal) return;
+    
+    // Find all target amount cells in the reports table
+    const targetCells = document.querySelectorAll('#reportsContent tbody tr td:nth-child(7)');
+    let total = 0;
+    
+    targetCells.forEach(cell => {
+        const text = cell.textContent.trim();
+        // Extract numeric value from currency format (e.g., "$1,234.56" -> 1234.56)
+        const value = parseFloat(text.replace(/[$,]/g, ''));
+        if (!isNaN(value)) {
+            total += value;
+        }
+    });
+    
+    // Format and display the total
+    reportsTotal.textContent = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(total);
 }
 </script>
 @endsection

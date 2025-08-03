@@ -25,6 +25,64 @@ class SalesTarget extends Model
         'target_amount' => 'decimal:2',
     ];
 
+    /**
+     * Scope for filtering based on user permissions and request filters
+     */
+    public function scopeFilter($query, array $filters)
+    {
+        // Year filter
+        if (!empty($filters['year'])) {
+            $query->where('year', $filters['year']);
+        }
+
+        // Month filter
+        if (!empty($filters['month'])) {
+            $query->where('month', $filters['month']);
+        }
+
+        // Region scope
+        if (!empty($filters['region_id'])) {
+            $query->where('region_id', $filters['region_id']);
+        }
+        if (!empty($filters['region_ids'])) {
+            $query->whereIn('region_id', $filters['region_ids']);
+        }
+
+        // Channel scope
+        if (!empty($filters['channel_id'])) {
+            $query->where('channel_id', $filters['channel_id']);
+        }
+        if (!empty($filters['channel_ids'])) {
+            $query->whereIn('channel_id', $filters['channel_ids']);
+        }
+
+        // Supplier filter
+        if (!empty($filters['supplier_id'])) {
+            $query->where('supplier_id', $filters['supplier_id']);
+        }
+
+        // Category filter
+        if (!empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        // Salesman filter
+        if (!empty($filters['salesman_id'])) {
+            $query->where('salesman_id', $filters['salesman_id']);
+        }
+
+        // Classification scope (via salesman)
+        if (!empty($filters['classifications'])) {
+            $query->whereHas('salesman', function($q) use ($filters) {
+                $q->whereHas('classifications', function($subQ) use ($filters) {
+                    $subQ->whereIn('classification', $filters['classifications']);
+                });
+            });
+        }
+
+        return $query;
+    }
+
     public function region()
     {
         return $this->belongsTo(Region::class);

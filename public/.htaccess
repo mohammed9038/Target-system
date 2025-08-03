@@ -19,33 +19,3 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
-
-# Security Headers
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-Frame-Options DENY
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
-</IfModule>
-
-# File Protection
-<Files .env>
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files composer.json>
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files composer.lock>
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files package.json>
-    Order Allow,Deny
-    Deny from all
-</Files>

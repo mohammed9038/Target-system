@@ -13,6 +13,7 @@ class Category extends Model
         'category_code',
         'name',
         'supplier_id',
+        'is_active',
     ];
 
     protected static function boot()

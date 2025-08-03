@@ -13,6 +13,7 @@ class Supplier extends Model
         'supplier_code',
         'name',
         'classification',
+        'is_active',
     ];
 
     protected static function boot()

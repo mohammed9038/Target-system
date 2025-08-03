@@ -13,9 +13,79 @@ use Illuminate\Http\Request;
 
 class TargetController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $targets = SalesTarget::with(['salesman.region', 'salesman.channel', 'supplier', 'category'])->paginate(15);
+        $query = SalesTarget::with(['salesman.region', 'salesman.channel', 'supplier', 'category']);
+        
+        // Handle search
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('year', 'like', '%' . $request->search . '%')
+                  ->orWhere('month', 'like', '%' . $request->search . '%')
+                  ->orWhere('target_amount', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('salesman', function($subQ) use ($request) {
+                      $subQ->where('name', 'like', '%' . $request->search . '%')
+                           ->orWhere('employee_code', 'like', '%' . $request->search . '%');
+                  })
+                  ->orWhereHas('supplier', function($subQ) use ($request) {
+                      $subQ->where('name', 'like', '%' . $request->search . '%');
+                  })
+                  ->orWhereHas('category', function($subQ) use ($request) {
+                      $subQ->where('name', 'like', '%' . $request->search . '%');
+                  });
+            });
+        }
+        
+        // Handle sorting
+        $sortBy = $request->get('sort', 'year');
+        $sortDirection = $request->get('direction', 'desc');
+        
+        // Validate sort field
+        $allowedSorts = [
+            'year', 'month', 'target_amount', 'created_at', 'updated_at',
+            'salesman_name', 'region_name', 'channel_name', 'supplier_name', 'category_name'
+        ];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'year';
+        }
+        
+        // Validate direction
+        if (!in_array($sortDirection, ['asc', 'desc'])) {
+            $sortDirection = 'desc';
+        }
+        
+        // Apply sorting
+        if ($sortBy === 'year' || $sortBy === 'month') {
+            $query->orderBy('year', $sortDirection)
+                  ->orderBy('month', $sortDirection);
+        } elseif ($sortBy === 'salesman_name') {
+            $query->join('salesmen', 'sales_targets.salesman_id', '=', 'salesmen.id')
+                  ->orderBy('salesmen.name', $sortDirection)
+                  ->select('sales_targets.*');
+        } elseif ($sortBy === 'region_name') {
+            $query->join('salesmen', 'sales_targets.salesman_id', '=', 'salesmen.id')
+                  ->join('regions', 'salesmen.region_id', '=', 'regions.id')
+                  ->orderBy('regions.name', $sortDirection)
+                  ->select('sales_targets.*');
+        } elseif ($sortBy === 'channel_name') {
+            $query->join('salesmen', 'sales_targets.salesman_id', '=', 'salesmen.id')
+                  ->join('channels', 'salesmen.channel_id', '=', 'channels.id')
+                  ->orderBy('channels.name', $sortDirection)
+                  ->select('sales_targets.*');
+        } elseif ($sortBy === 'supplier_name') {
+            $query->join('suppliers', 'sales_targets.supplier_id', '=', 'suppliers.id')
+                  ->orderBy('suppliers.name', $sortDirection)
+                  ->select('sales_targets.*');
+        } elseif ($sortBy === 'category_name') {
+            $query->join('categories', 'sales_targets.category_id', '=', 'categories.id')
+                  ->orderBy('categories.name', $sortDirection)
+                  ->select('sales_targets.*');
+        } else {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+        
+        $targets = $query->paginate(15)->appends($request->all());
+        
         $regions = Region::all();
         $channels = Channel::all();
         $suppliers = Supplier::all();

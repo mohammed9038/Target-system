@@ -19,7 +19,18 @@ return new class extends Migration
         DB::statement("UPDATE suppliers SET classification_new = classification");
         
         Schema::table('suppliers', function (Blueprint $table) {
-            // Drop old column and rename new one
+            // Drop any indexes on the classification column first
+            try {
+                $table->dropIndex('idx_suppliers_class_name');
+            } catch (\Exception $e) {
+                // Index might not exist, continue
+            }
+            try {
+                $table->dropIndex('idx_suppliers_classification');
+            } catch (\Exception $e) {
+                // Index might not exist, continue
+            }
+            // Drop old column
             $table->dropColumn('classification');
         });
         
