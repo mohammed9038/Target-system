@@ -1,0 +1,71 @@
+# Laravel Framework
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/app/public/
+/storage/framework/cache/data/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/logs/*.log
+
+# Environment files
+.env
+.env.backup
+.env.production
+.env.local
+.env.testing
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Test and development files
+test_*.php
+debug_*.php
+verify_*.php
+create_*.php
+check_*.php
+final_*.php
+post_*.php
+
+# Backup files
+*.backup
+*_backup.*
+*.bak
+
+# Cache files
+.phpunit.result.cache
+bootstrap/cache/*.php
+storage/framework/cache/
+storage/debugbar/
+
+# Compiled assets
+/public/build/
+/public/mix-manifest.json
+
+# Documentation (if generated)
+/docs/api/
+
+# Deployment files
+deploy.sh
+hostinger_*.php
+setup_*.php
