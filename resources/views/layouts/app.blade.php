@@ -605,7 +605,7 @@
                 
                 <div class="nav-section">
                     <div class="nav-section-title">{{ __('Account') }}</div>
-                    <a class="nav-link" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <a class="nav-link" href="{{ route('logout.get') }}">
                         <i class="bi bi-box-arrow-right"></i>{{ __('Logout') }}
                     </a>
                 </div>

@@ -130,6 +130,8 @@ Route::get('/final-test', function () {
 // Authentication routes
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
+// Add GET logout route for testing
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout.get');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Debug route for checking users (outside auth middleware)
