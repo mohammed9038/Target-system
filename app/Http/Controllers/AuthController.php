@@ -15,13 +15,7 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
         
-        // Ensure fresh session and CSRF token
-        session()->regenerateToken();
-        
-        return response()->view('auth.login')
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+        return view('auth.login');
     }
 
     public function login(Request $request)
@@ -43,32 +37,10 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        try {
-            Log::info('Logout attempt', [
-                'user' => Auth::user() ? Auth::user()->username : 'None',
-                'session_id' => $request->session()->getId(),
-            ]);
-            
-            // Clear authentication
-            Auth::logout();
-            
-            // Invalidate the session
-            $request->session()->invalidate();
-            
-            // Regenerate CSRF token
-            $request->session()->regenerateToken();
-            
-            // Force session save
-            $request->session()->save();
-            
-            Log::info('Logout successful');
-            
-            // Redirect to login with fresh session
-            return redirect()->route('login')->with('status', 'Successfully logged out');
-            
-        } catch (\Exception $e) {
-            Log::error('Logout error: ' . $e->getMessage());
-            return redirect()->route('login')->with('error', 'Logout failed');
-        }
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        return redirect()->route('login')->with('success', 'Successfully logged out');
     }
 } 

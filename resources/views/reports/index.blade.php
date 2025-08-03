@@ -165,9 +165,6 @@
                 <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
                     <i class="bi bi-x-circle me-1"></i>{{ __('Clear Filters') }}
                 </button>
-                <button class="btn btn-success btn-sm" onclick="exportReport()">
-                    <i class="bi bi-download me-1"></i>{{ __('Export Data') }}
-                </button>
             </div>
         </div>
     </div>
@@ -775,33 +772,6 @@ async function loadReports() {
             </div>
         `;
     }
-}
-
-function exportReport() {
-    // Get all filter values
-    const filters = {
-        year: document.getElementById('yearFilter').value,
-        month: document.getElementById('monthFilter').value,
-        region_id: document.getElementById('regionFilter').value,
-        channel_id: document.getElementById('channelFilter').value,
-        supplier_id: document.getElementById('supplierFilter').value,
-        category_id: document.getElementById('categoryFilter').value,
-        classification: document.getElementById('classificationFilter').value,
-        salesman_id: document.getElementById('salesmanFilter').value,
-    };
-    
-    // Remove empty filters
-    Object.keys(filters).forEach(key => {
-        if (!filters[key]) {
-            delete filters[key];
-        }
-    });
-    
-    // Build query string
-    const queryParams = new URLSearchParams(filters);
-    
-    // Open the export URL in a new window
-    window.open(`/api/v1/reports/export.xlsx?${queryParams}`, '_blank');
 }
 
 function clearFilters() {

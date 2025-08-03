@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class TargetController extends Controller
 {
@@ -399,18 +400,31 @@ class TargetController extends Controller
 
     public function getMatrix(Request $request)
     {
-        $request->validate([
-            'year' => 'required|integer',
-            'month' => 'required|integer|min:1|max:12',
-            'region_id' => 'nullable|exists:regions,id',
-            'channel_id' => 'nullable|exists:channels,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'category_id' => 'nullable|exists:categories,id',
-            'salesman_id' => 'nullable|exists:salesmen,id',
-            'classification' => 'nullable|in:food,non_food,both',
-        ]);
+        try {
+            $request->validate([
+                'year' => 'required|integer',
+                'month' => 'required|integer|min:1|max:12',
+                'region_id' => 'nullable|exists:regions,id',
+                'channel_id' => 'nullable|exists:channels,id',
+                'supplier_id' => 'nullable|exists:suppliers,id',
+                'category_id' => 'nullable|exists:categories,id',
+                'salesman_id' => 'nullable|exists:salesmen,id',
+                'classification' => 'nullable|in:food,non_food,both',
+            ]);
 
-        $user = Auth::user();
+            Log::info('GetMatrix called', [
+                'user_id' => Auth::id(),
+                'params' => $request->all()
+            ]);
+
+            $user = Auth::user();
+            
+            if (!$user) {
+                Log::error('GetMatrix: User not authenticated');
+                return response()->json([
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
         
         // Create cache key based on request parameters and user
         $cacheKey = 'matrix_' . md5(serialize([
@@ -658,6 +672,19 @@ class TargetController extends Controller
         Cache::put($cacheKey, $response, 300);
         
         return response()->json($response);
+        
+        } catch (\Exception $e) {
+            Log::error('GetMatrix error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id(),
+                'params' => $request->all()
+            ]);
+            
+            return response()->json([
+                'message' => 'Error loading matrix data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function bulkSave(Request $request)
@@ -756,137 +783,222 @@ class TargetController extends Controller
 
     public function exportCsv(Request $request)
     {
-        $request->validate([
-            'year' => 'required|integer',
-            'month' => 'required|integer|min:1|max:12',
-            'region_id' => 'nullable|exists:regions,id',
-            'channel_id' => 'nullable|exists:channels,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'category_id' => 'nullable|exists:categories,id',
-            'salesman_id' => 'nullable|exists:salesmen,id',
-            'classification' => 'nullable|in:food,non_food,both',
-        ]);
+        try {
+            $request->validate([
+                'year' => 'required|integer',
+                'month' => 'required|integer|min:1|max:12',
+                'region_id' => 'nullable|exists:regions,id',
+                'channel_id' => 'nullable|exists:channels,id',
+                'supplier_id' => 'nullable|exists:suppliers,id',
+                'category_id' => 'nullable|exists:categories,id',
+                'salesman_id' => 'nullable|exists:salesmen,id',
+                'classification' => 'nullable|in:food,non_food,both',
+            ]);
+            
+            Log::info('Export CSV started', [
+                'user_id' => Auth::id(),
+                'filters' => $request->all()
+            ]);
 
-        $user = Auth::user();
-        
-        // Apply user scope restrictions for non-admin users
-        $userScope = null;
-        if (!$user->isAdmin()) {
-            $userScope = $user->scope();
-        }
-        
-        // Start with salesmen query to get filtered salesmen
-        $salesmenQuery = \App\Models\Salesman::query();
-        
-        if ($request->filled('region_id')) {
-            $salesmenQuery->where('region_id', $request->region_id);
-        }
-        if ($request->filled('channel_id')) {
-            $salesmenQuery->where('channel_id', $request->channel_id);
-        }
-        if ($request->filled('salesman_id')) {
-            $salesmenQuery->where('id', $request->salesman_id);
-        }
-        if ($request->filled('classification')) {
-            $salesmenQuery->whereHas('classifications', function($q) use ($request) {
-                $q->where('classification', $request->classification);
+            $user = Auth::user();
+            
+            // Apply user scope restrictions for non-admin users
+            $userScope = null;
+            if (!$user->isAdmin()) {
+                $userScope = $user->scope();
+                Log::info('User scope applied', ['scope' => $userScope]);
+            }
+            
+            // Start with salesmen query to get filtered salesmen
+            $salesmenQuery = \App\Models\Salesman::query();
+            
+            if ($request->filled('region_id')) {
+                $salesmenQuery->where('region_id', $request->region_id);
+            }
+            if ($request->filled('channel_id')) {
+                $salesmenQuery->where('channel_id', $request->channel_id);
+            }
+            if ($request->filled('salesman_id')) {
+                $salesmenQuery->where('id', $request->salesman_id);
+            }
+            if ($request->filled('classification')) {
+                $salesmenQuery->whereHas('classifications', function($q) use ($request) {
+                    $q->where('classification', $request->classification);
+                });
+            }
+            
+            // Apply user scope filters for non-admin users
+            if ($userScope) {
+                // Filter by user's assigned regions
+                if (!empty($userScope['region_ids'])) {
+                    $salesmenQuery->whereIn('region_id', $userScope['region_ids']);
+                }
+                
+                // Filter by user's assigned channels
+                if (!empty($userScope['channel_ids'])) {
+                    $salesmenQuery->whereIn('channel_id', $userScope['channel_ids']);
+                }
+                
+                // Filter by user's assigned classifications
+                if (!empty($userScope['classifications'])) {
+                    $salesmenQuery->whereHas('classifications', function($q) use ($userScope) {
+                        $q->whereIn('classification', $userScope['classifications']);
+                    });
+                }
+            }
+            
+            // Get filtered salesman IDs
+            $salesmanIds = $salesmenQuery->pluck('id');
+            
+            Log::info('Filtered salesmen', ['count' => $salesmanIds->count()]);
+
+            // Get all salesmen that match our criteria
+            $salesmen = \App\Models\Salesman::with(['region', 'channel'])
+                ->whereIn('id', $salesmanIds)
+                ->get();
+
+            // Get suppliers and categories based on filters and user scope
+            $suppliersQuery = \App\Models\Supplier::query();
+            $categoriesQuery = \App\Models\Category::query();
+
+            if ($request->filled('supplier_id')) {
+                $suppliersQuery->where('id', $request->supplier_id);
+            }
+            if ($request->filled('category_id')) {
+                $categoriesQuery->where('id', $request->category_id);
+            }
+            
+            // Apply user scope filters to suppliers for non-admin users
+            if ($userScope) {
+                // Filter suppliers by user's assigned classifications
+                if (!empty($userScope['classifications'])) {
+                    $suppliersQuery->whereIn('classification', $userScope['classifications']);
+                }
+            }
+
+            $suppliers = $suppliersQuery->get();
+            $categories = $categoriesQuery->get();
+
+            // Filter categories to only include those that belong to the selected suppliers
+            $validCategories = $categories->filter(function($category) use ($suppliers) {
+                return $suppliers->contains('id', $category->supplier_id);
             });
-        }
-        
-        // Apply user scope filters for non-admin users
-        if ($userScope) {
-            // Filter by user's assigned regions
-            if (!empty($userScope['region_ids'])) {
-                $salesmenQuery->whereIn('region_id', $userScope['region_ids']);
-            }
-            
-            // Filter by user's assigned channels
-            if (!empty($userScope['channel_ids'])) {
-                $salesmenQuery->whereIn('channel_id', $userScope['channel_ids']);
-            }
-            
-            // Filter by user's assigned classifications
-            if (!empty($userScope['classifications'])) {
-                $salesmenQuery->whereHas('classifications', function($q) use ($userScope) {
-                    $q->whereIn('classification', $userScope['classifications']);
+
+            Log::info('Export data counts', [
+                'salesmen' => $salesmen->count(),
+                'suppliers' => $suppliers->count(),
+                'categories' => $validCategories->count()
+            ]);
+
+            // Get existing targets for the period to lookup actual amounts
+            $existingTargets = SalesTarget::where('year', $request->year)
+                ->where('month', $request->month)
+                ->whereIn('salesman_id', $salesmanIds)
+                ->get()
+                ->keyBy(function($target) {
+                    return $target->salesman_id . '-' . $target->supplier_id . '-' . $target->category_id;
                 });
-            }
-        }
-        
-        // Get filtered salesman IDs
-        $salesmanIds = $salesmenQuery->pluck('id');
 
-        // Build targets query with all filters
-        $query = SalesTarget::with([
-            'region', 'channel', 'salesman', 'supplier', 'category'
-        ])->where('year', $request->year)
-          ->where('month', $request->month)
-          ->whereIn('salesman_id', $salesmanIds);
+            Log::info('Existing targets found', ['count' => $existingTargets->count()]);
 
-        if ($request->filled('supplier_id')) {
-            $query->where('supplier_id', $request->supplier_id);
-        }
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-        
-        // Apply user scope filters to targets for non-admin users
-        if ($userScope) {
-            // Filter targets by user's assigned suppliers (classifications)
-            if (!empty($userScope['classifications'])) {
-                $query->whereHas('supplier', function($q) use ($userScope) {
-                    $q->whereIn('classification', $userScope['classifications']);
-                });
-            }
-        }
-
-        $targets = $query->get();
-
-        // Prepare CSV data
-        $csvData = [];
-        $csvData[] = [
-            'Classification', 'Status', 'Year', 'Month', 'Region', 'Channel', 
-            'Supplier', 'Category', 'RouteCode', 'Salesman Code', 'Employee Code', 'Salesmen Name', 'Amount'
-        ];
-
-        foreach ($targets as $target) {
-            // Get supplier classification for this target
-            $supplierClassification = $target->supplier->classification ?? '';
-            
+            // Prepare CSV data
+            $csvData = [];
             $csvData[] = [
-                $supplierClassification,
-                'Active',
-                $target->year,
-                str_pad($target->month, 2, '0', STR_PAD_LEFT), // Format as 01, 02, etc.
-                $target->region->name ?? '',
-                $target->channel->name ?? '',
-                $target->supplier->name ?? '',
-                $target->category->name ?? '',
-                '', // RouteCode - empty as in original CSV
-                $target->salesman->salesman_code ?? '',
-                $target->salesman->employee_code ?? '',
-                $target->salesman->name ?? '',
-                number_format($target->target_amount, 2, '.', '') // Format as 1000.00
+                'Classification', 'Status', 'Year', 'Month', 'Region', 'Channel', 
+                'Supplier', 'Category', 'RouteCode', 'Salesman Code', 'Employee Code', 'Salesmen Name', 'Amount'
             ];
-        }
 
-        $monthName = date('M', mktime(0, 0, 0, $request->month, 1));
-        $filename = "targets_{$request->year}_{$monthName}.csv";
-        
-        $callback = function() use ($csvData) {
-            $file = fopen('php://output', 'w');
-            // Add BOM for Excel compatibility
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            foreach ($csvData as $row) {
-                fputcsv($file, $row);
+            // Generate all combinations of salesmen, suppliers, and categories
+            foreach ($salesmen as $salesman) {
+                foreach ($suppliers as $supplier) {
+                    // Check if salesman's classification is compatible with supplier
+                    $salesmanClassifications = $salesman->classifications->pluck('classification')->toArray();
+                    $supplierClassification = $supplier->classification;
+                    
+                    // Skip if classifications don't match (unless one is 'both')
+                    if (!empty($salesmanClassifications)) {
+                        $isCompatible = in_array('both', $salesmanClassifications) || 
+                                       $supplierClassification === 'both' ||
+                                       in_array($supplierClassification, $salesmanClassifications);
+                        
+                        if (!$isCompatible) {
+                            continue;
+                        }
+                    }
+
+                    foreach ($validCategories as $category) {
+                        // Only process categories that belong to this supplier
+                        if ($category->supplier_id !== $supplier->id) {
+                            continue;
+                        }
+
+                        // Look up existing target
+                        $targetKey = $salesman->id . '-' . $supplier->id . '-' . $category->id;
+                        $existingTarget = $existingTargets->get($targetKey);
+                        
+                        $amount = $existingTarget ? $existingTarget->target_amount : 0;
+                        
+                        $csvData[] = [
+                            $supplier->classification ?? '',
+                            'Active',
+                            $request->year,
+                            str_pad($request->month, 2, '0', STR_PAD_LEFT), // Format as 01, 02, etc.
+                            $salesman->region->name ?? '',
+                            $salesman->channel->name ?? '',
+                            $supplier->name ?? '',
+                            $category->name ?? '',
+                            '', // RouteCode - empty as in original CSV
+                            $salesman->salesman_code ?? '',
+                            $salesman->employee_code ?? '',
+                            $salesman->name ?? '',
+                            number_format($amount, 2, '.', '') // Format as 1000.00
+                        ];
+                    }
+                }
             }
-            fclose($file);
-        };
 
-        return response()->stream($callback, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename={$filename}",
-        ]);
+            $monthName = date('M', mktime(0, 0, 0, $request->month, 1));
+            $filename = "targets_{$request->year}_{$monthName}.csv";
+            
+            Log::info('Export CSV completed', [
+                'filename' => $filename,
+                'rows' => count($csvData) - 1 // Subtract header row
+            ]);
+            
+            $callback = function() use ($csvData) {
+                $file = fopen('php://output', 'w');
+                // Add BOM for Excel compatibility
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                foreach ($csvData as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename={$filename}",
+            ]);
+            
+        } catch (ValidationException $e) {
+            Log::error('Export validation failed', [
+                'errors' => $e->errors(),
+                'request' => $request->all()
+            ]);
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Export failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            return response()->json([
+                'message' => 'Export failed: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function upload(Request $request)

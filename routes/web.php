@@ -155,55 +155,65 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard (now using reports page)
     Route::get('/dashboard', [ReportController::class, 'index'])->name('dashboard');
     
-    // Regions
-    Route::resource('regions', RegionController::class);
-    Route::post('regions/{region}/toggle_status', [RegionController::class, 'toggleStatus'])->name('regions.toggle_status');
-    Route::get('regions-import', [RegionController::class, 'showImportForm'])->name('regions.import.form');
-    Route::post('regions-import', [RegionController::class, 'import'])->name('regions.import');
-    Route::get('regions-export', [RegionController::class, 'export'])->name('regions.export');
-    Route::get('regions-template', [RegionController::class, 'downloadTemplate'])->name('regions.template');
+    // Reports
+    Route::resource('reports', ReportController::class);
+    Route::get('reports/summary', [ReportController::class, 'summary'])->name('reports.summary');
     
-    // Channels
-    Route::resource('channels', ChannelController::class);
-    Route::post('channels/{channel}/toggle_status', [ChannelController::class, 'toggleStatus'])->name('channels.toggle_status');
-    Route::get('channels-import', [ChannelController::class, 'showImportForm'])->name('channels.import.form');
-    Route::post('channels-import', [ChannelController::class, 'import'])->name('channels.import');
-    Route::get('channels-export', [ChannelController::class, 'export'])->name('channels.export');
-    Route::get('channels-template', [ChannelController::class, 'downloadTemplate'])->name('channels.template');
-    
-    // Suppliers
-    Route::resource('suppliers', SupplierController::class);
-    Route::post('suppliers/{supplier}/toggle_status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle_status');
-    Route::get('suppliers-import', [SupplierController::class, 'showImportForm'])->name('suppliers.import.form');
-    Route::post('suppliers-import', [SupplierController::class, 'import'])->name('suppliers.import');
-    Route::get('suppliers-export', [SupplierController::class, 'export'])->name('suppliers.export');
-    Route::get('suppliers-template', [SupplierController::class, 'downloadTemplate'])->name('suppliers.template');
-    
-    // Categories
-    Route::resource('categories', CategoryController::class);
-    Route::post('categories/{category}/toggle_status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle_status');
-    Route::get('categories-import', [CategoryController::class, 'showImportForm'])->name('categories.import.form');
-    Route::post('categories-import', [CategoryController::class, 'import'])->name('categories.import');
-    Route::get('categories-export', [CategoryController::class, 'export'])->name('categories.export');
-    Route::get('categories-template', [CategoryController::class, 'downloadTemplate'])->name('categories.template');
-    
-    // Salesmen
-    Route::resource('salesmen', SalesmanController::class);
-    Route::post('salesmen/{salesman}/toggle_status', [SalesmanController::class, 'toggleStatus'])->name('salesmen.toggle_status');
-    Route::get('salesmen-import', [SalesmanController::class, 'showImportForm'])->name('salesmen.import.form');
-    Route::post('salesmen-import', [SalesmanController::class, 'import'])->name('salesmen.import');
-    Route::get('salesmen-export', [SalesmanController::class, 'export'])->name('salesmen.export');
-    Route::get('salesmen-template', [SalesmanController::class, 'downloadTemplate'])->name('salesmen.template');
-    
-    // Periods
-    Route::resource('periods', PeriodController::class);
+    // Test export route
+    Route::get('test-export', function() {
+        return view('test_export');
+    })->name('test.export');
     
     // Targets
     Route::resource('targets', TargetController::class);
     Route::get('targets/create', [TargetController::class, 'create'])->name('targets.create');
     
-    // Users (admin only)
+    // Admin only routes
     Route::middleware(['admin'])->group(function () {
+        // Regions
+        Route::resource('regions', RegionController::class);
+        Route::post('regions/{region}/toggle_status', [RegionController::class, 'toggleStatus'])->name('regions.toggle_status');
+        Route::get('regions-import', [RegionController::class, 'showImportForm'])->name('regions.import.form');
+        Route::post('regions-import', [RegionController::class, 'import'])->name('regions.import');
+        Route::get('regions-export', [RegionController::class, 'export'])->name('regions.export');
+        Route::get('regions-template', [RegionController::class, 'downloadTemplate'])->name('regions.template');
+        
+        // Channels
+        Route::resource('channels', ChannelController::class);
+        Route::post('channels/{channel}/toggle_status', [ChannelController::class, 'toggleStatus'])->name('channels.toggle_status');
+        Route::get('channels-import', [ChannelController::class, 'showImportForm'])->name('channels.import.form');
+        Route::post('channels-import', [ChannelController::class, 'import'])->name('channels.import');
+        Route::get('channels-export', [ChannelController::class, 'export'])->name('channels.export');
+        Route::get('channels-template', [ChannelController::class, 'downloadTemplate'])->name('channels.template');
+        
+        // Suppliers
+        Route::resource('suppliers', SupplierController::class);
+        Route::post('suppliers/{supplier}/toggle_status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle_status');
+        Route::get('suppliers-import', [SupplierController::class, 'showImportForm'])->name('suppliers.import.form');
+        Route::post('suppliers-import', [SupplierController::class, 'import'])->name('suppliers.import');
+        Route::get('suppliers-export', [SupplierController::class, 'export'])->name('suppliers.export');
+        Route::get('suppliers-template', [SupplierController::class, 'downloadTemplate'])->name('suppliers.template');
+        
+        // Categories
+        Route::resource('categories', CategoryController::class);
+        Route::post('categories/{category}/toggle_status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle_status');
+        Route::get('categories-import', [CategoryController::class, 'showImportForm'])->name('categories.import.form');
+        Route::post('categories-import', [CategoryController::class, 'import'])->name('categories.import');
+        Route::get('categories-export', [CategoryController::class, 'export'])->name('categories.export');
+        Route::get('categories-template', [CategoryController::class, 'downloadTemplate'])->name('categories.template');
+        
+        // Salesmen
+        Route::resource('salesmen', SalesmanController::class);
+        Route::post('salesmen/{salesman}/toggle_status', [SalesmanController::class, 'toggleStatus'])->name('salesmen.toggle_status');
+        Route::get('salesmen-import', [SalesmanController::class, 'showImportForm'])->name('salesmen.import.form');
+        Route::post('salesmen-import', [SalesmanController::class, 'import'])->name('salesmen.import');
+        Route::get('salesmen-export', [SalesmanController::class, 'export'])->name('salesmen.export');
+        Route::get('salesmen-template', [SalesmanController::class, 'downloadTemplate'])->name('salesmen.template');
+        
+        // Periods
+        Route::resource('periods', PeriodController::class);
+        
+        // Users
         Route::resource('users', UserController::class);
     });
     

@@ -3,53 +3,45 @@
 @section('title', __('Users'))
 
 @section('content')
-<div class="d-flex justify-content-between align-items-start mb-4">
-    <div>
-        <h1 class="h2 mb-1">{{ __('Users') }}</h1>
-        <p class="text-muted mb-0">{{ __('Manage system users and permissions') }}</p>
-    </div>
-    <div class="d-flex gap-2" style="margin-top: 0.5rem;">
-        <a href="{{ route('users.create') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>{{ __('Add User') }}
-        </a>
-    </div>
-</div>
 
+<!-- Page Header -->
+<x-page_header 
+    title="{{ __('Users') }}"
+    description="{{ __('Manage system users and permissions') }}"
+    icon="bi-person-gear">
+    
+    <x-slot name="actions">
+        <x-crud_actions 
+            :hasExport="false"
+            :hasImport="false" 
+            :hasTemplate="false"
+            addButtonText="{{ __('Add User') }}"
+            addButtonHref="{{ route('users.create') }}"
+            addButtonIcon="bi-person-plus"
+        />
+    </x-slot>
+</x-page_header>
+
+<!-- Flash Messages -->
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <div class="d-flex align-items-center">
-            <i class="bi bi-check-circle me-2"></i>
-            <div>
-                <strong>{{ __('Success!') }}</strong> {{ session('success') }}
-            </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    <x-alert type="success" class="mb-4">
+        <strong>{{ __('Success!') }}</strong> {{ session('success') }}
+    </x-alert>
 @endif
 
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <div class="d-flex align-items-center">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <div>
-                <strong>{{ __('Error!') }}</strong> {{ session('error') }}
-            </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    <x-alert type="danger" class="mb-4">
+        <strong>{{ __('Error!') }}</strong> {{ session('error') }}
+    </x-alert>
 @endif
 
-<div class="card">
-    <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-                <h5 class="mb-0 me-3">
-                    <i class="bi bi-person-gear me-2"></i>{{ __('Users List') }}
-                </h5>
-                <small class="text-muted">
-                    {{ count($users) }} {{ __('records') }}
-                </small>
-            </div>
+<!-- Users Table -->
+<x-card title="{{ __('Users List') }}" icon="bi-person-gear">
+    <x-slot name="actions">
+        <div class="d-flex align-items-center gap-3">
+            <small class="text-muted">
+                {{ count($users) }} {{ __('records') }}
+            </small>
             <div class="input-group" style="width: 250px;">
                 <span class="input-group-text bg-light border-end-0">
                     <i class="bi bi-search text-muted"></i>
@@ -57,27 +49,27 @@
                 <input type="text" class="form-control border-start-0" id="searchInput" placeholder="{{ __('Search users...') }}">
             </div>
         </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0" id="usersTable">
-                <thead class="table-light">
-                    <tr>
-                        <th class="border-0 px-4">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-person me-2 text-muted"></i>{{ __('Username') }}
-                            </div>
-                        </th>
-                        <th class="border-0">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-shield me-2 text-muted"></i>{{ __('Role') }}
-                            </div>
-                        </th>
-                        <th class="border-0">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-geo-alt me-2 text-muted"></i>{{ __('Region') }}
-                            </div>
-                        </th>
+    </x-slot>
+    
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="usersTable">
+            <thead>
+                <tr>
+                    <th class="px-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person me-2 text-muted"></i>{{ __('Username') }}
+                        </div>
+                    </th>
+                    <th>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-shield me-2 text-muted"></i>{{ __('Role') }}
+                        </div>
+                    </th>
+                    <th>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-geo-alt me-2 text-muted"></i>{{ __('Region') }}
+                        </div>
+                    </th>
                         <th class="border-0">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-diagram-3 me-2 text-muted"></i>{{ __('Channel') }}
@@ -212,7 +204,7 @@
             </table>
         </div>
     </div>
-</div>
+</x-card>
 
 @push('scripts')
 <script>

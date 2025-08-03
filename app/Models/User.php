@@ -9,7 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 /**
  * App\Models\User
- * 
+ *
  * @property int $id
  * @property string $username
  * @property string $password
@@ -29,6 +29,30 @@ use Laravel\Sanctum\HasApiTokens;
  * @method bool hasRegion(int $regionId)
  * @method bool hasChannel(int $channelId)
  * @method bool hasClassification(string $classification)
+ * @property string|null $remember_token
+ * @property-read int|null $channels_count
+ * @property-read int|null $classifications_count
+ * @property-read mixed $channel
+ * @property-read mixed $channel_id
+ * @property-read mixed $region
+ * @property-read mixed $region_id
+ * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
+ * @property-read int|null $notifications_count
+ * @property-read int|null $regions_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
+ * @property-read int|null $tokens_count
+ * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User wherePassword($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereRememberToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereRole($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUsername($value)
+ * @mixin \Eloquent
  */
 class User extends Authenticatable
 {

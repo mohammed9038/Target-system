@@ -99,7 +99,7 @@
             
             /* Layout */
             --sidebar-width: 280px;
-            --topbar-height: 60px;
+            --topbar-height: 80px;
         }
 
         /* Global Styles */
@@ -237,21 +237,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 var(--spacing-lg);
+            padding: 0 var(--spacing-xl);
             box-shadow: var(--shadow-sm);
             position: sticky;
             top: 0;
             z-index: 100;
-        }
-
-        .app-topbar .navbar-brand {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .app-topbar .user-menu {
-            font-size: 0.9rem;
         }
 
         .app-content {
@@ -265,22 +255,9 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: var(--spacing-lg);
-            padding-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-lg);
             border-bottom: 1px solid var(--secondary-200);
-        }
-
-        .page-header-content h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--secondary-900);
-            margin: 0 0 0.25rem 0;
-        }
-
-        .page-header-content p {
-            color: var(--secondary-600);
-            margin: 0;
-            font-size: 0.9rem;
         }
 
         .page-header-content h1 {
@@ -590,7 +567,6 @@
                     </a>
                 </div>
 
-                @if(auth()->user()->role === 'admin')
                 <div class="nav-section">
                     <div class="nav-section-title">Master Data</div>
                     <a href="{{ route('salesmen.index') }}" class="nav-link {{ request()->routeIs('salesmen.*') ? 'active' : '' }}">
@@ -614,21 +590,20 @@
                         Regions
                     </a>
                 </div>
-                @endif
 
-                @if(auth()->user()->role === 'admin')
                 <div class="nav-section">
                     <div class="nav-section-title">System</div>
                     <a href="{{ route('periods.index') }}" class="nav-link {{ request()->routeIs('periods.*') ? 'active' : '' }}">
                         <i class="bi bi-calendar-range"></i>
                         Periods
                     </a>
+                    @if(auth()->user()->role === 'admin')
                     <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
                         <i class="bi bi-person-gear"></i>
                         Users
                     </a>
+                    @endif
                 </div>
-                @endif
             </div>
         </nav>
 

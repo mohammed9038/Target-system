@@ -75,9 +75,4 @@ class ReportController extends Controller
 
         return view('reports.summary', compact('targets', 'summary'));
     }
-
-    public function exportExcel(Request $request)
-    {
-        return Excel::download(new TargetsExport($request), 'sales_targets.xlsx');
-    }
 } 

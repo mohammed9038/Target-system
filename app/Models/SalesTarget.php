@@ -5,6 +5,51 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int $year
+ * @property int $month
+ * @property int $region_id
+ * @property int $channel_id
+ * @property int $salesman_id
+ * @property int $supplier_id
+ * @property int $category_id
+ * @property numeric $target_amount
+ * @property string|null $notes
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property string $classification
+ * @property-read \App\Models\Category $category
+ * @property-read \App\Models\Channel $channel
+ * @property-read \App\Models\Region $region
+ * @property-read \App\Models\Salesman $salesman
+ * @property-read \App\Models\Supplier $supplier
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget byCategory($categoryId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget byChannel($channelId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget byEmployeeCode($employeeCode)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget byPeriod($year, $month)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget byRegion($regionId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget bySalesman($salesmanId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget bySupplier($supplierId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget filter(array $filters)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereCategoryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereChannelId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereClassification($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereMonth($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereNotes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereRegionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereSalesmanId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereSupplierId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereTargetAmount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SalesTarget whereYear($value)
+ * @mixin \Eloquent
+ */
 class SalesTarget extends Model
 {
     use HasFactory;

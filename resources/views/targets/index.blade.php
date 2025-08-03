@@ -4,127 +4,126 @@
 
 @section('content')
 <div id="alert-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;"></div>
-<!-- Compact Page Header -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h1 class="h4 mb-1 fw-bold d-flex align-items-center">
-            <div class="p-1 rounded-circle bg-primary bg-opacity-10 me-2">
-                <i class="bi bi-bullseye text-primary small"></i>
-            </div>
-            {{ __('Sales Targets') }}
-        </h1>
-        <p class="text-muted mb-0 ms-4 small">{{ __('Set and manage sales targets for your team members') }}</p>
-    </div>
-    <div class="d-flex gap-1 flex-wrap">
-        <button type="button" class="btn btn-success btn-sm" onclick="saveAllTargets()" id="saveAllBtn">
-            <i class="bi bi-check-circle me-1"></i>{{ __('Save All') }}
-        </button>
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-outline-primary" onclick="exportTargets()">
-                <i class="bi bi-file-earmark-spreadsheet me-1"></i>{{ __('Export') }}
-            </button>
-            <button type="button" class="btn btn-outline-primary" onclick="showUploadModal()">
-                <i class="bi bi-upload me-1"></i>{{ __('Upload') }}
-            </button>
-            <button type="button" class="btn btn-outline-primary" onclick="downloadTemplate()">
-                <i class="bi bi-download me-1"></i>{{ __('Template') }}
-            </button>
+
+<!-- Page Header -->
+<x-page_header 
+    title="{{ __('Sales Targets') }}"
+    description="{{ __('Set and manage sales targets for your team members') }}"
+    icon="bi-bullseye">
+    
+    <x-slot name="actions">
+        <div class="d-flex gap-2">
+            <x-button variant="outline-primary" size="sm" icon="bi-upload" onclick="showUploadModal()">
+                {{ __('Upload') }}
+            </x-button>
+            <x-button variant="outline-primary" size="sm" icon="bi-download" onclick="downloadTemplate()">
+                {{ __('Template') }}
+            </x-button>
+        </div>
+    </x-slot>
+</x-page_header>
+
+<!-- Filters Panel -->
+<x-card title="{{ __('Filters & Controls') }}" icon="bi-funnel" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <!-- Year and Month -->
+        <div class="col-lg-2 col-md-3">
+            <label for="target_year" class="form-label fw-medium">{{ __('Year') }}</label>
+            <select class="form-select" id="target_year" name="year">
+                <option value="">{{ __('Year') }}</option>
+                @for($y = date('Y'); $y <= date('Y') + 2; $y++)
+                    <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
+                @endfor
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <label for="target_month" class="form-label fw-medium">{{ __('Month') }}</label>
+            <select class="form-select" id="target_month" name="month">
+                <option value="">{{ __('Month') }}</option>
+                @for($m = 1; $m <= 12; $m++)
+                    <option value="{{ $m }}" {{ $m == date('n') ? 'selected' : '' }}>
+                        {{ date('M', mktime(0, 0, 0, $m, 1)) }}
+                    </option>
+                @endfor
+            </select>
+        </div>
+        
+        <!-- Filters -->
+        <div class="col-lg-2 col-md-3">
+            <label for="filter_classification" class="form-label fw-medium">{{ __('Type') }}</label>
+            <select class="form-select" id="filter_classification">
+                <option value="">{{ __('All Types') }}</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <label for="filter_region" class="form-label fw-medium">{{ __('Region') }}</label>
+            <select class="form-select" id="filter_region">
+                <option value="">{{ __('All Regions') }}</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <label for="filter_channel" class="form-label fw-medium">{{ __('Channel') }}</label>
+            <select class="form-select" id="filter_channel">
+                <option value="">{{ __('All Channels') }}</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <label for="filter_supplier" class="form-label fw-medium">{{ __('Supplier') }}</label>
+            <select class="form-select" id="filter_supplier">
+                <option value="">{{ __('All Suppliers') }}</option>
+            </select>
         </div>
     </div>
-</div>
-
-<!-- Compact Filters Panel -->
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body p-3">
-        <!-- Period and Filters in One Row -->
-        <div class="row g-2 align-items-end">
-            <div class="col-lg-1 col-md-2">
-                <label for="target_year" class="form-label small text-muted mb-1">{{ __('Year') }}</label>
-                <select class="form-select form-select-sm" id="target_year" name="year">
-                    <option value="">{{ __('Year') }}</option>
-                    @for($y = date('Y'); $y <= date('Y') + 2; $y++)
-                        <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
-                    @endfor
-                </select>
-            </div>
-            <div class="col-lg-1 col-md-2">
-                <label for="target_month" class="form-label small text-muted mb-1">{{ __('Month') }}</label>
-                <select class="form-select form-select-sm" id="target_month" name="month">
-                    <option value="">{{ __('Month') }}</option>
-                    @for($m = 1; $m <= 12; $m++)
-                        <option value="{{ $m }}" {{ $m == date('n') ? 'selected' : '' }}>
-                            {{ date('M', mktime(0, 0, 0, $m, 1)) }}
-                        </option>
-                    @endfor
-                </select>
-            </div>
-            <div class="col-lg-1 col-md-2">
-                <button class="btn btn-primary btn-sm w-100" id="loadMatrixBtn" onclick="loadTargetMatrix()">
-                    <i class="bi bi-table me-1"></i>{{ __('Load') }}
-                </button>
-            </div>
-            <div class="col-lg-1 col-md-2">
-                <label for="filter_classification" class="form-label small text-muted mb-1">{{ __('Type') }}</label>
-                <select class="form-select form-select-sm" id="filter_classification">
-                    <option value="">{{ __('All') }}</option>
-                </select>
-            </div>
-            <div class="col-lg-2 col-md-2">
-                <label for="filter_region" class="form-label small text-muted mb-1">{{ __('Region') }}</label>
-                <select class="form-select form-select-sm" id="filter_region">
-                    <option value="">{{ __('All Regions') }}</option>
-                </select>
-            </div>
-            <div class="col-lg-2 col-md-2">
-                <label for="filter_channel" class="form-label small text-muted mb-1">{{ __('Channel') }}</label>
-                <select class="form-select form-select-sm" id="filter_channel">
-                    <option value="">{{ __('All Channels') }}</option>
-                </select>
-            </div>
-            <div class="col-lg-2 col-md-2">
-                <label for="filter_supplier" class="form-label small text-muted mb-1">{{ __('Supplier') }}</label>
-                <select class="form-select form-select-sm" id="filter_supplier">
-                    <option value="">{{ __('All Suppliers') }}</option>
-                </select>
-            </div>
-            <div class="col-lg-1 col-md-2">
-                <label for="filter_category" class="form-label small text-muted mb-1">{{ __('Category') }}</label>
-                <select class="form-select form-select-sm" id="filter_category">
-                    <option value="">{{ __('All') }}</option>
-                </select>
-            </div>
-            <div class="col-lg-1 col-md-2">
-                <label for="filter_salesman" class="form-label small text-muted mb-1">{{ __('Salesman') }}</label>
-                <select class="form-select form-select-sm" id="filter_salesman">
-                    <option value="">{{ __('All') }}</option>
-                </select>
+    
+    <div class="row g-3 align-items-end mt-2">
+        <div class="col-lg-2 col-md-3">
+            <label for="filter_category" class="form-label fw-medium">{{ __('Category') }}</label>
+            <select class="form-select" id="filter_category">
+                <option value="">{{ __('All Categories') }}</option>
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-3">
+            <label for="filter_salesman" class="form-label fw-medium">{{ __('Salesman') }}</label>
+            <select class="form-select" id="filter_salesman">
+                <option value="">{{ __('All Salesmen') }}</option>
+            </select>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="col-lg-8 col-md-6">
+            <div class="d-flex gap-2 justify-content-end">
+                <x-button variant="primary" id="loadMatrixBtn" onclick="loadTargetMatrix()" icon="bi-table">
+                    {{ __('Load Matrix') }}
+                </x-button>
+                <x-button variant="success" onclick="saveAllTargets()" id="saveAllBtn" icon="bi-check-circle">
+                    {{ __('Save All') }}
+                </x-button>
+                <x-button variant="outline-secondary" onclick="exportTargets()" icon="bi-file-earmark-spreadsheet">
+                    {{ __('Export') }}
+                </x-button>
             </div>
         </div>
     </div>
-</div>
+</x-card>
 
-<!-- Compact Target Matrix -->
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-        <h6 class="card-title mb-0 fw-semibold d-flex align-items-center">
-            <i class="bi bi-grid-3x3-gap text-success me-2"></i>
-            {{ __('Target Matrix') }}
-        </h6>
+<!-- Target Matrix -->
+<x-card title="{{ __('Target Matrix') }}" icon="bi-grid-3x3-gap" class="mb-4">
+    <x-slot name="actions">
         <small class="text-muted">
             <i class="bi bi-info-circle me-1"></i>{{ __('Enter target amounts') }}
         </small>
-    </div>
-    <div class="card-body p-0">
-        <!-- Loading State -->
-        <div id="matrix-loading" class="text-center py-3" style="display: none;">
-            <div class="spinner-border text-primary mb-2" role="status">
-                <span class="visually-hidden">{{ __('Loading...') }}</span>
-            </div>
-            <small class="text-muted">{{ __('Loading target matrix...') }}</small>
+    </x-slot>
+    
+    <!-- Loading State -->
+    <div id="matrix-loading" class="text-center py-4" style="display: none;">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">{{ __('Loading...') }}</span>
         </div>
-        
-        <!-- Matrix Container -->
-        <div id="matrix-container" style="display: none;">
+        <div class="text-muted">{{ __('Loading target matrix...') }}</div>
+    </div>
+    
+    <!-- Matrix Container -->
+    <div id="matrix-container" style="display: none;">
             <div class="table-responsive">
                 <table class="table table-hover table-sm mb-0" id="target-matrix" style="font-size: 0.90rem;">
                     <thead class="table-dark">
@@ -187,7 +186,7 @@
             </div>
         </div>
     </div>
-</div>
+</x-card>
 
 <!-- Upload Modal -->
 <div class="modal fade" id="uploadModal" tabindex="-1">
@@ -697,14 +696,19 @@
             return;
         }
 
+        // Allow export even if matrix is not loaded, but warn user
         if (!isMatrixLoaded) {
-            showAlert("Please load the matrix first before exporting.", "warning");
-            return;
+            const proceed = confirm("The target matrix has not been loaded. Do you want to export all targets for the selected year and month?");
+            if (!proceed) {
+                return;
+            }
         }
 
         const params = new URLSearchParams(getCurrentFilters());
         const exportBtn = document.querySelector('button[onclick="exportTargets()"]');
         const originalText = exportBtn.innerHTML;
+        
+        console.log('Starting export with params:', params.toString());
         
         try {
             exportBtn.disabled = true;
@@ -712,24 +716,44 @@
             
             const response = await fetch(`/api/v1/export/targets?${params}`, {
                 method: 'GET',
+                credentials: 'same-origin',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'text/csv, application/octet-stream',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
 
+            console.log('Export response status:', response.status);
+            console.log('Export response headers:', [...response.headers.entries()]);
+            
             const contentType = response.headers.get('content-type');
             
             if (!response.ok) {
+                let errorMessage = 'Export failed';
+                
                 if (contentType && contentType.includes('application/json')) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Export failed');
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || 'Export failed';
+                        console.error('Export JSON error:', errorData);
+                    } catch (e) {
+                        console.error('Failed to parse error JSON:', e);
+                    }
                 } else {
                     const textResponse = await response.text();
-                    if (textResponse.includes('<')) {
-                        throw new Error('Authentication required. Please refresh the page and try again.');
+                    console.error('Export text error:', textResponse);
+                    
+                    if (textResponse.includes('<html>') || textResponse.includes('<!DOCTYPE')) {
+                        errorMessage = 'Authentication required. Please refresh the page and try again.';
+                    } else if (textResponse.includes('404')) {
+                        errorMessage = 'Export endpoint not found. Please contact administrator.';
+                    } else {
+                        errorMessage = 'Export failed: ' + response.statusText;
                     }
-                    throw new Error('Export failed: ' + response.statusText);
                 }
+                
+                throw new Error(errorMessage);
             }
 
             if (contentType && contentType.includes('text/html')) {
@@ -737,6 +761,12 @@
             }
 
             const blob = await response.blob();
+            console.log('Export blob size:', blob.size, 'bytes');
+            
+            if (blob.size === 0) {
+                throw new Error('Export file is empty. No data available for selected filters.');
+            }
+            
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

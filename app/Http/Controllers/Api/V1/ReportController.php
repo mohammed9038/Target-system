@@ -162,25 +162,4 @@ class ReportController extends Controller
             'group_by' => $groupBy
         ]);
     }
-
-    public function export(Request $request)
-    {
-        $user = Auth::user();
-        
-        // Apply user scope for managers
-        $scope = null;
-        if (!$user->isAdmin()) {
-            $scope = $user->scope();
-        }
-
-        $filters = $request->only([
-            'year', 'month', 'region_id', 'channel_id', 
-            'supplier_id', 'category_id', 'classification', 'salesman_id'
-        ]);
-
-        return Excel::download(
-            new TargetsExport($filters, $scope),
-            'targets_export_' . date('Y-m-d_H-i-s') . '.xlsx'
-        );
-    }
 } 

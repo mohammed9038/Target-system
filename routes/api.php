@@ -110,6 +110,21 @@ Route::prefix('v1')->group(function () {
 
         // Export/Import routes (separate from targets resource)
         Route::get('/export/targets', [TargetController::class, 'exportCsv']);
+        Route::get('/export/debug', function(Request $request) {
+            return response()->json([
+                'auth_check' => Auth::check(),
+                'user' => Auth::user() ? [
+                    'id' => Auth::user()->id,
+                    'name' => Auth::user()->name,
+                    'role' => Auth::user()->role
+                ] : null,
+                'request_params' => $request->all(),
+                'targets_count' => \App\Models\SalesTarget::count(),
+                'salesmen_count' => \App\Models\Salesman::count(),
+                'suppliers_count' => \App\Models\Supplier::count(),
+                'categories_count' => \App\Models\Category::count()
+            ]);
+        });
         Route::get('/export/template', [TargetController::class, 'downloadTemplate']);
         
         // Targets (Admin and Manager)
@@ -121,7 +136,6 @@ Route::prefix('v1')->group(function () {
 
         // Reports (Admin and Manager with scope)
         Route::get('/reports/summary', [ReportController::class, 'summary']);
-        Route::get('/reports/export.xlsx', [ReportController::class, 'export']);
     });
     
     // Master Data Import/Export routes (rate limited)

@@ -12,6 +12,7 @@
         "spatie/laravel-permission": "^6.0"
     },
     "require-dev": {
+        "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.0",
         "mockery/mockery": "^1.4.4",
@@ -53,6 +54,7 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform-check": false,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
@@ -60,4 +62,4 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true
-} 
+}

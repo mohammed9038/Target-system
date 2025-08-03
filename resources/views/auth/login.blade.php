@@ -1,36 +1,32 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-lg border-0">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow-xl border-0">
                     <div class="card-body p-5">
                         <!-- Header -->
                         <div class="text-center mb-4">
-                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
-                                <i class="bi bi-target text-primary" style="font-size: 2rem;"></i>
+                            <div class="bg-primary text-white p-3 rounded-circle d-inline-block mb-3"
+                                 style="width: 72px; height: 72px; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-bullseye" style="font-size: 2rem;"></i>
                             </div>
-                            <h2 class="fw-bold mb-1">{{ __('Target Management System') }}</h2>
+                            <h2 class="fw-bold mb-1 text-dark">{{ __('Target Management') }}</h2>
                             <p class="text-muted mb-0">{{ __('Please sign in to continue') }}</p>
                         </div>
 
                         <!-- Error Messages -->
                         @if ($errors->any())
-                            <div class="alert alert-danger border-0 shadow-sm">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    <div>
-                                        <strong>{{ __('Login Failed') }}</strong>
-                                        <ul class="mb-0 mt-1 small">
-                                            @foreach ($errors->all() as $error)
-                                                <li>{{ $error }}</li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+                            <x-alert type="danger" class="mb-4" :dismissible="false">
+                                <strong>{{ __('Login Failed') }}</strong>
+                                <ul class="mb-0 mt-1 small">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </x-alert>
                         @endif
 
                         <!-- Login Form -->
@@ -91,9 +87,11 @@
                                 </label>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-2 fw-medium">
-                                <i class="bi bi-box-arrow-in-right me-2"></i>{{ __('Sign In') }}
-                            </button>
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary py-2 fw-medium" style="display: block !important; visibility: visible !important; background: #4f46e5 !important; color: white !important; border: 2px solid #4f46e5 !important;">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>{{ __('Sign In') }}
+                                </button>
+                            </div>
                         </form>
 
                         <!-- Footer -->
@@ -137,15 +135,25 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    border: none;
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%) !important;
+    border: none !important;
     transition: all 0.3s ease;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: white !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.375rem !important;
+    text-decoration: none !important;
+    margin-top: 1rem !important;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--primary-dark) 0%, #312e81 100%);
+    background: linear-gradient(135deg, #3730a3 0%, #312e81 100%) !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3) !important;
+    color: white !important;
 }
 
 .form-check-input:checked {
@@ -222,20 +230,6 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
             submitBtn.disabled = true;
         });
-    }
-
-    // Refresh CSRF token if page was loaded after logout
-    if (window.performance && window.performance.navigation.type === 1) {
-        // Page was refreshed - fetch fresh CSRF token
-        fetch('/debug-csrf')
-            .then(response => response.json())
-            .then(data => {
-                const csrfInput = form.querySelector('input[name="_token"]');
-                if (csrfInput && data.csrf_token) {
-                    csrfInput.value = data.csrf_token;
-                }
-            })
-            .catch(error => console.log('CSRF refresh failed:', error));
     }
 });
 </script>

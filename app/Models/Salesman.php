@@ -5,6 +5,39 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $employee_code
+ * @property string|null $salesman_code
+ * @property string $name
+ * @property int $region_id
+ * @property int $channel_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property int $is_active
+ * @property-read \App\Models\Channel $channel
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SalesmanClassification> $classifications
+ * @property-read int|null $classifications_count
+ * @property-read mixed $classification_list
+ * @property-read \App\Models\Region $region
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SalesTarget> $salesTargets
+ * @property-read int|null $sales_targets_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman active()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman byClassification($classification)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereChannelId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereEmployeeCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereRegionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereSalesmanCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Salesman whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class Salesman extends Model
 {
     use HasFactory;

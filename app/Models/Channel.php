@@ -5,6 +5,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $channel_code
+ * @property string $name
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Region|null $region
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Salesman> $salesmen
+ * @property-read int|null $salesmen_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
+ * @property-read int|null $users_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel active()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel whereChannelCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Channel whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class Channel extends Model
 {
     use HasFactory;

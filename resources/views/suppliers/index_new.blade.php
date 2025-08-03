@@ -64,7 +64,7 @@
                         <i class="bi bi-building text-primary"></i>
                     </div>
                     <div>
-                        <div class="fw-medium text-dark">{{ $supplier->name }}</div>
+                        <div class="fw-medium text-dark">{{ $supplier->company_name }}</div>
                         @if($supplier->email)
                             <small class="text-muted">{{ $supplier->email }}</small>
                         @endif
@@ -114,7 +114,7 @@
                     @endif
                     <button type="button" 
                             class="btn btn-sm btn-outline-danger" 
-                            onclick="confirmDelete('{{ $supplier->id }}', '{{ $supplier->name }}')"
+                            onclick="confirmDelete('{{ $supplier->id }}', '{{ $supplier->company_name }}')"
                             title="{{ __('Delete') }}">
                         <i class="bi bi-trash"></i>
                     </button>
